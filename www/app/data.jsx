@@ -23,22 +23,10 @@ const METHODS = {
   moonsighting: { label:'Moonsighting Committee', region:'Shafaq · general',fajrAngle:18,   ishaAngle:18   },
 };
 
-const QIBLA = { bearing:57, label:'NE', distanceKm:10140, city:'Ottawa, ON', lat:45.4215, lon:-75.6972 };
-const MECCA = { lat: 21.4225, lon: 39.8262 };
+/* Fallback location (Ottawa) used when GPS is unavailable */
+const LOC_DEFAULT = { lat:45.4215, lon:-75.6972, city:'Ottawa, ON' };
 
-function computeQibla(lat, lon){
-  const phi1  = _d2r(lat),  phi2 = _d2r(MECCA.lat);
-  const dLon  = _d2r(MECCA.lon - lon);
-  const y     = Math.sin(dLon) * Math.cos(phi2);
-  const x     = Math.cos(phi1)*Math.sin(phi2) - Math.sin(phi1)*Math.cos(phi2)*Math.cos(dLon);
-  const brng  = (_r2d(Math.atan2(y, x)) + 360) % 360;
-  const sdLat = Math.sin(_d2r(MECCA.lat - lat) / 2);
-  const sdLon = Math.sin(dLon / 2);
-  const a     = sdLat*sdLat + Math.cos(_d2r(lat))*Math.cos(_d2r(MECCA.lat))*sdLon*sdLon;
-  const dist  = Math.round(6371 * 2 * Math.asin(Math.sqrt(a)));
-  const DIRS  = ['N','NE','E','SE','S','SW','W','NW'];
-  return { bearing: Math.round(brng), label: DIRS[Math.round(brng/45) % 8], distanceKm: dist };
-}
+const MECCA = { lat:21.4225, lon:39.8262 };
 
 /* ── Solar maths (Spencer 1971 · ±1 min accuracy up to 65 °N) ── */
 function _d2r(d){ return d*Math.PI/180; }
@@ -56,6 +44,19 @@ function _solar(date){
   return { decl, eqt };
 }
 
+/* ── Qibla direction + distance to Mecca from any coordinates ── */
+function computeQibla(lat, lon){
+  const phi1=_d2r(lat), phi2=_d2r(MECCA.lat), dLon=_d2r(MECCA.lon-lon);
+  const y=Math.sin(dLon)*Math.cos(phi2);
+  const x=Math.cos(phi1)*Math.sin(phi2)-Math.sin(phi1)*Math.cos(phi2)*Math.cos(dLon);
+  const bearing=Math.round((_r2d(Math.atan2(y,x))+360)%360);
+  const sdLat=Math.sin((phi2-phi1)/2), sdLon=Math.sin(dLon/2);
+  const a=sdLat*sdLat+Math.cos(phi1)*Math.cos(phi2)*sdLon*sdLon;
+  const distanceKm=Math.round(12742*Math.asin(Math.sqrt(a)));
+  const dirs=['N','NE','E','SE','S','SW','W','NW'];
+  return {bearing, label:dirs[Math.round(bearing/45)%8], distanceKm};
+}
+
 // Hour angle in degrees for a given zenith angle (degrees)
 function _ha(latDeg, declRad, zenithDeg){
   const cosH = (Math.cos(_d2r(zenithDeg)) - Math.sin(_d2r(latDeg))*Math.sin(declRad))
@@ -67,8 +68,8 @@ function _ha(latDeg, declRad, zenithDeg){
 
 function computeTimes(prefs, date, lat, lon){
   date = date || TODAY;
-  lat  = (lat  != null) ? lat  : QIBLA.lat;
-  lon  = (lon  != null) ? lon  : QIBLA.lon;
+  lat  = (lat  != null) ? lat  : LOC_DEFAULT.lat;
+  lon  = (lon  != null) ? lon  : LOC_DEFAULT.lon;
 
   const tz = -date.getTimezoneOffset();        // minutes east of UTC
   const { decl, eqt } = _solar(date);
@@ -150,7 +151,8 @@ const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes()+n.getSeconds()/60; }
 
 Object.assign(window, {
-  PRAYERS, METHODS, computeTimes, computeQibla, fmt, dayOrder, nextPrayer,
+  PRAYERS, METHODS, computeTimes, computeQibla, MECCA, LOC_DEFAULT,
+  fmt, dayOrder, nextPrayer,
   countdown, HIJRI_MONTHS, gToHijri, WEEKDAYS, WEEKDAYS_S, GMONTHS, TODAY,
-  QIBLA, nowMinutes,
+  nowMinutes,
 });

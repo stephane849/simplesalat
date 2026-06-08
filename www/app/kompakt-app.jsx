@@ -24,24 +24,22 @@ function KompaktApp({ variant='a', chrome=true }){
     return ()=> clearInterval(id);
   }, []);
 
-  // GPS — request once on mount; silently falls back to Ottawa on failure/denial
-  const [loc, setLoc] = React.useState(null);
+  // GPS location — null while loading, then { lat, lon }
+  const [loc,       setLoc]     = React.useState(null);
+  const [locStatus, setLocStat] = React.useState('loading');
   React.useEffect(()=>{
-    if(!navigator.geolocation) return;
+    if(!navigator.geolocation){ setLocStat('denied'); return; }
     navigator.geolocation.getCurrentPosition(
-      function(pos){ setLoc({ lat: pos.coords.latitude, lon: pos.coords.longitude }); },
-      function(){},
-      { enableHighAccuracy:true, timeout:10000, maximumAge:300000 }
+      pos=>{ setLoc({lat:pos.coords.latitude, lon:pos.coords.longitude}); setLocStat('ok'); },
+      ()=>  setLocStat('denied'),
+      { enableHighAccuracy:false, timeout:10000, maximumAge:3600000 }
     );
   }, []);
 
-  const lat    = loc ? loc.lat : QIBLA.lat;
-  const lon    = loc ? loc.lon : QIBLA.lon;
-  const locStr = loc
-    ? (Math.abs(lat).toFixed(1) + '°' + (lat>=0?'N':'S') + ' ' + Math.abs(lon).toFixed(1) + '°' + (lon>=0?'E':'W'))
-    : QIBLA.city;
-  const qibla  = computeQibla(lat, lon);
-  const times  = computeTimes(prefs, TODAY, lat, lon);
+  const lat   = loc ? loc.lat : null;
+  const lon   = loc ? loc.lon : null;
+  const qibla = computeQibla(lat !== null ? lat : LOC_DEFAULT.lat, lon !== null ? lon : LOC_DEFAULT.lon);
+  const times = computeTimes(prefs, null, lat, lon);
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
@@ -57,7 +55,7 @@ function KompaktApp({ variant='a', chrome=true }){
   let view;
   switch(screen){
     case 'menu':          view = <ScreenMenu go={go} />; break;
-    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} locStr={locStr} />; break;
+    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locStatus={locStatus} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
     case 'qibla':         view = <ScreenQibla go={go} qibla={qibla} />; break;

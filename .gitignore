@@ -9,5 +9,8 @@ www/app/*.js
 # Vendor scripts (downloaded during CI build)
 www/vendor/
 
+# Adhan audio (downloaded during CI build)
+www/audio/
+
 # Build outputs
 *.apk
