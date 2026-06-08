@@ -38,7 +38,7 @@ function KompaktApp({ variant='a', chrome=true }){
 
   const lat   = loc ? loc.lat : null;
   const lon   = loc ? loc.lon : null;
-  const qibla = computeQibla(lat ?? LOC_DEFAULT.lat, lon ?? LOC_DEFAULT.lon);
+  const qibla = computeQibla(lat !== null ? lat : LOC_DEFAULT.lat, lon !== null ? lon : LOC_DEFAULT.lon);
   const times = computeTimes(prefs, null, lat, lon);
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));

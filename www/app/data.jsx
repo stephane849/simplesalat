@@ -46,11 +46,12 @@ function _solar(date){
 
 /* ── Qibla direction + distance to Mecca from any coordinates ── */
 function computeQibla(lat, lon){
-  const φ1=_d2r(lat), φ2=_d2r(MECCA.lat), Δλ=_d2r(MECCA.lon-lon);
-  const y=Math.sin(Δλ)*Math.cos(φ2);
-  const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  const phi1=_d2r(lat), phi2=_d2r(MECCA.lat), dLon=_d2r(MECCA.lon-lon);
+  const y=Math.sin(dLon)*Math.cos(phi2);
+  const x=Math.cos(phi1)*Math.sin(phi2)-Math.sin(phi1)*Math.cos(phi2)*Math.cos(dLon);
   const bearing=Math.round((_r2d(Math.atan2(y,x))+360)%360);
-  const a=Math.sin((φ2-φ1)/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  const sdLat=Math.sin((phi2-phi1)/2), sdLon=Math.sin(dLon/2);
+  const a=sdLat*sdLat+Math.cos(phi1)*Math.cos(phi2)*sdLon*sdLon;
   const distanceKm=Math.round(12742*Math.asin(Math.sqrt(a)));
   const dirs=['N','NE','E','SE','S','SW','W','NW'];
   return {bearing, label:dirs[Math.round(bearing/45)%8], distanceKm};
