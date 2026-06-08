@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Warm paper background -->
+  <rect width="512" height="512" fill="#FAF9F5"/>
+  <!-- Crescent moon: outer circle minus upper-right bite -->
+  <defs>
+    <mask id="cm">
+      <rect width="512" height="512" fill="white"/>
+      <circle cx="328" cy="170" r="214" fill="black"/>
+    </mask>
+  </defs>
+  <circle cx="194" cy="266" r="236" fill="#17160F" mask="url(#cm)"/>
+</svg>

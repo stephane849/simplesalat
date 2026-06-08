@@ -33,7 +33,7 @@ function ScreenMenu({ go }){
 }
 
 /* ---------- Settings ---------- */
-function ScreenSettings({ prefs, setPrefs, go }){
+function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
   const mKeys = Object.keys(METHODS);
   const m = METHODS[prefs.method];
   const cycleMethod = ()=>{ const i=mKeys.indexOf(prefs.method); setPrefs({method:mKeys[(i+1)%mKeys.length]}); };
@@ -45,8 +45,10 @@ function ScreenSettings({ prefs, setPrefs, go }){
       <hr className="hrule" />
       <div className="scroll">
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">Location</div><div className="sub">Auto · GPS</div></div>
-          <span className="trail"><span className="val">{QIBLA.city}</span></span>
+          <div className="body"><div className="label">Location</div><div className="sub">{locStatus==='ok'?'GPS':'Auto · GPS'}</div></div>
+          <span className="trail"><span className="val" style={{maxWidth:146, textAlign:'right', lineHeight:1.3}}>
+            {locStatus==='ok'&&loc ? `${Math.abs(loc.lat).toFixed(2)}°${loc.lat>=0?'N':'S'}, ${Math.abs(loc.lon).toFixed(2)}°${loc.lon>=0?'E':'W'}` : locStatus==='loading' ? 'Locating…' : LOC_DEFAULT.city+' (default)'}
+          </span></span>
         </div>
 
         <div className="row" onClick={cycleMethod} style={{borderBottom:'1px solid var(--line)'}}>
@@ -103,36 +105,53 @@ function ScreenSettings({ prefs, setPrefs, go }){
 }
 
 /* ---------- Adhan & Notifications ---------- */
+const ADHAN_SRCS = {
+  makkah:  'audio/adhan-makkah.mp3',
+  madinah: 'audio/adhan-madinah.mp3',
+};
+
 function ScreenNotifications({ prefs, setPrefs, go }){
   const reminders = ['At adhan','5 minutes before','10 minutes before','15 minutes before'];
-  const sounds = [{k:'makkah',label:'Makkah'},{k:'madinah',label:'Madīnah'},{k:'chime',label:'Soft chime'}];
+  const sounds = [
+    {k:'makkah',  label:'Makkah'},
+    {k:'madinah', label:'Madīnah'},
+  ];
   const cyc = (key, arr)=>{ const i=arr.indexOf(prefs[key]); setPrefs({[key]:arr[(i+1)%arr.length]}); };
   const list = PRAYERS.filter(p=>p.prayer);
   const setNotif = (k,v)=> setPrefs({ notif:{...prefs.notif, [k]:v} });
 
-  const fileRef = React.useRef(null);
+  const fileRef  = React.useRef(null);
   const audioRef = React.useRef(null);
-  const [playing, setPlaying] = React.useState(false);
+  const [playingKey, setPlayingKey] = React.useState(null);
+
+  const stopAll = ()=>{ if(audioRef.current) audioRef.current.pause(); setPlayingKey(null); };
+
+  const previewSound = (e, key, src)=>{
+    e.stopPropagation();
+    const a = audioRef.current; if(!a) return;
+    if(playingKey===key){ stopAll(); return; }
+    stopAll();
+    a.src = src; a.currentTime = 0;
+    a.play().then(()=>setPlayingKey(key)).catch(()=>setPlayingKey(null));
+  };
 
   const onFile = (e)=>{
     const f = e.target.files && e.target.files[0];
     if(!f) return;
     if(prefs.customAdhan && prefs.customAdhan.url) URL.revokeObjectURL(prefs.customAdhan.url);
+    stopAll();
     const url = URL.createObjectURL(f);
     setPrefs({ customAdhan:{ name:f.name, url }, sound:'custom', adhan:true });
-    setPlaying(false);
   };
-  const togglePlay = (e)=>{
+  const toggleCustom = (e)=>{
     e.stopPropagation();
-    const a = audioRef.current; if(!a) return;
-    if(playing){ a.pause(); setPlaying(false); }
-    else { a.currentTime = 0; a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false)); }
+    if(!prefs.customAdhan) return;
+    previewSound(e, 'custom', prefs.customAdhan.url);
   };
   const removeCustom = (e)=>{
     e.stopPropagation();
     if(prefs.customAdhan && prefs.customAdhan.url) URL.revokeObjectURL(prefs.customAdhan.url);
-    if(audioRef.current){ audioRef.current.pause(); }
-    setPlaying(false);
+    stopAll();
     setPrefs({ customAdhan:null, sound: prefs.sound==='custom' ? 'makkah' : prefs.sound });
   };
 
@@ -160,6 +179,12 @@ function ScreenNotifications({ prefs, setPrefs, go }){
             <div key={s.k} className="row" onClick={()=>setPrefs({sound:s.k})} style={{borderBottom:'1px solid var(--line)'}}>
               <span className="lead"><Radio on={prefs.sound===s.k} /></span>
               <div className="body"><div className="label">{s.label}</div></div>
+              <span className="trail">
+                <button className="appbar iconbtn" style={{padding:8, border:'1.5px solid var(--ink)', borderRadius:'50%'}}
+                  onClick={(e)=>previewSound(e, s.k, ADHAN_SRCS[s.k])} aria-label="Preview">
+                  {playingKey===s.k ? <Ico.pause/> : <Ico.play/>}
+                </button>
+              </span>
             </div>
           ))}
 
@@ -172,7 +197,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
               </div>
               <span className="trail" style={{gap:6}}>
                 <button className="appbar iconbtn" style={{padding:8, border:'1.5px solid var(--ink)', borderRadius:'50%'}}
-                  onClick={togglePlay} aria-label="Preview">{playing ? <Ico.pause/> : <Ico.play/>}</button>
+                  onClick={toggleCustom} aria-label="Preview">{playingKey==='custom' ? <Ico.pause/> : <Ico.play/>}</button>
                 <button className="appbar iconbtn" style={{padding:8, color:'var(--ink-mute)'}}
                   onClick={removeCustom} aria-label="Remove"><Ico.close/></button>
               </span>
@@ -185,8 +210,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
               <div className="sub">MP3, WAV or OGG audio</div></div>
           </div>
           <input ref={fileRef} type="file" accept="audio/*" style={{display:'none'}} onChange={onFile} />
-          <audio ref={audioRef} src={prefs.customAdhan ? prefs.customAdhan.url : undefined}
-            onEnded={()=>setPlaying(false)} />
+          <audio ref={audioRef} onEnded={()=>setPlayingKey(null)} />
         </div>
 
         <div style={{padding:'18px 32px 8px'}} className="kicker">Timing</div>
@@ -283,47 +307,119 @@ function ScreenCalendar({ go, hijriAdj=0 }){
 }
 
 /* ---------- Qibla ---------- */
-function ScreenQibla({ go }){
-  const C=160, R=128, b=QIBLA.bearing;
-  const rad=(deg)=> (deg-90)*Math.PI/180;
+function ScreenQibla({ go, qibla }){
+  const C=160, R=128, b=qibla.bearing;
   const pt=(deg,r)=>[C+Math.cos((deg-90)*Math.PI/180)*r, C+Math.sin((deg-90)*Math.PI/180)*r];
-  const tip=pt(b, R-26);
-  const baseL=pt(b-90, 13), baseR=pt(b+90, 13);
-  const tail=pt(b+180, 40);
+  const tip=pt(b, R-26), baseL=pt(b-90,13), baseR=pt(b+90,13), tail=pt(b+180,40);
   const card=[['N',0],['E',90],['S',180],['W',270]];
+
+  const [heading, setHeading] = React.useState(null);
+  const [sensorErr, setSensorErr] = React.useState(false);
+
+  React.useEffect(()=>{
+    let attached = false;
+    const onOri = (e)=>{
+      let h = null;
+      // iOS / some Android: webkitCompassHeading is already 0=N clockwise
+      if(e.webkitCompassHeading != null && e.webkitCompassHeading >= 0){
+        h = e.webkitCompassHeading;
+      // Absolute deviceorientation: alpha=0 means North, increases counter-clockwise
+      } else if(e.alpha != null){
+        h = (360 - e.alpha + 360) % 360;
+      }
+      if(h !== null){ setHeading(h); setSensorErr(false); }
+    };
+
+    const attach = ()=>{
+      if(attached) return;
+      attached = true;
+      // Prefer absolute orientation (magnetic North) if available
+      window.addEventListener('deviceorientationabsolute', onOri, true);
+      window.addEventListener('deviceorientation',         onOri, true);
+    };
+
+    if(typeof DeviceOrientationEvent !== 'undefined'){
+      if(typeof DeviceOrientationEvent.requestPermission === 'function'){
+        // iOS 13+: must request permission
+        DeviceOrientationEvent.requestPermission()
+          .then(s=>{ if(s==='granted') attach(); else setSensorErr(true); })
+          .catch(()=>setSensorErr(true));
+      } else {
+        attach();
+      }
+    } else {
+      setSensorErr(true);
+    }
+
+    return ()=>{
+      window.removeEventListener('deviceorientationabsolute', onOri, true);
+      window.removeEventListener('deviceorientation',         onOri, true);
+    };
+  }, []);
+
+  // Rotate the entire compass (rose + needle) by -heading.
+  // Result: the needle points to where Qibla is ON SCREEN.
+  // When the ◻ marker is at the 12-o'clock position, you're facing Qibla.
+  const rot = heading !== null ? -heading : 0;
+
   return (
     <div className="view">
       <AppBar title="Qibla" onBack={()=>go('home')} onMenu={()=>go('menu')} />
       <hr className="hrule" />
       <div style={{flex:'1 1 auto', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6}}>
-        <svg viewBox="0 0 320 320" width="300" height="300">
-          <circle cx={C} cy={C} r={R} fill="none" stroke="var(--line-2)" strokeWidth="1.5"/>
-          <circle cx={C} cy={C} r={R-20} fill="none" stroke="var(--line)" strokeWidth="1"/>
-          {/* degree ticks every 30 */}
-          {Array.from({length:12}).map((_,i)=>{ const a=i*30; const o=pt(a,R), inn=pt(a,R-(a%90===0?14:8));
-            return <line key={i} x1={o[0]} y1={o[1]} x2={inn[0]} y2={inn[1]} stroke="var(--ink-soft)" strokeWidth={a%90===0?2:1}/>; })}
-          {/* cardinal labels */}
-          {card.map(([l,a])=>{ const p=pt(a,R-34);
-            return <text key={l} x={p[0]} y={p[1]} textAnchor="middle" dominantBaseline="central"
-              fontFamily="var(--sans)" fontSize="15" fontWeight={l==='N'?700:500}
-              fill={l==='N'?'var(--ink)':'var(--ink-mute)'}>{l}</text>; })}
-          {/* qibla needle */}
-          <line x1={C} y1={C} x2={tail[0]} y2={tail[1]} stroke="var(--ink-mute)" strokeWidth="2" strokeLinecap="round"/>
-          <polygon points={`${tip[0]},${tip[1]} ${baseL[0]},${baseL[1]} ${baseR[0]},${baseR[1]}`} fill="var(--ink)"/>
-          {/* kaaba marker (square) at tip */}
-          <rect x={tip[0]-7} y={tip[1]-7} width="14" height="14" fill="var(--paper)" stroke="var(--ink)" strokeWidth="2"
-            transform={`rotate(${b} ${tip[0]} ${tip[1]})`}/>
-          <circle cx={C} cy={C} r="4" fill="var(--ink)"/>
-        </svg>
+        {/* Fixed target ring — align the ◻ here to face Qibla */}
+        <div style={{position:'relative', width:300, height:300}}>
+          <svg viewBox="0 0 320 320" width="300" height="300" style={{position:'absolute',top:0,left:0}}>
+            {/* Fixed target marker at 12-o'clock */}
+            <polygon points={`${C},${C-R-10} ${C-8},${C-R+6} ${C+8},${C-R+6}`}
+              fill="var(--ink)" opacity="0.35"/>
+          </svg>
+          <svg viewBox="0 0 320 320" width="300" height="300" style={{position:'absolute',top:0,left:0}}>
+            {/* Rotating compass + Qibla needle */}
+            <g transform={`rotate(${rot} ${C} ${C})`}>
+              <circle cx={C} cy={C} r={R}    fill="none" stroke="var(--line-2)" strokeWidth="1.5"/>
+              <circle cx={C} cy={C} r={R-20} fill="none" stroke="var(--line)"   strokeWidth="1"/>
+              {Array.from({length:12}).map((_,i)=>{
+                const a=i*30, o=pt(a,R), inn=pt(a,R-(a%90===0?14:8));
+                return <line key={i} x1={o[0]} y1={o[1]} x2={inn[0]} y2={inn[1]}
+                  stroke="var(--ink-soft)" strokeWidth={a%90===0?2:1}/>;
+              })}
+              {card.map(([l,a])=>{ const p=pt(a,R-34);
+                return <text key={l} x={p[0]} y={p[1]} textAnchor="middle" dominantBaseline="central"
+                  fontFamily="var(--sans)" fontSize="15" fontWeight={l==='N'?700:500}
+                  fill={l==='N'?'var(--ink)':'var(--ink-mute)'}>{l}</text>;
+              })}
+              {/* Qibla needle */}
+              <line x1={C} y1={C} x2={tail[0]} y2={tail[1]} stroke="var(--ink-mute)" strokeWidth="2" strokeLinecap="round"/>
+              <polygon points={`${tip[0]},${tip[1]} ${baseL[0]},${baseL[1]} ${baseR[0]},${baseR[1]}`} fill="var(--ink)"/>
+              <rect x={tip[0]-7} y={tip[1]-7} width="14" height="14"
+                fill="var(--paper)" stroke="var(--ink)" strokeWidth="2"
+                transform={`rotate(${b} ${tip[0]} ${tip[1]})`}/>
+            </g>
+            <circle cx={C} cy={C} r="4" fill="var(--ink)"/>
+          </svg>
+        </div>
+
         <div style={{textAlign:'center', marginTop:6}}>
-          <div className="tnum" style={{fontSize:34, fontWeight:600, letterSpacing:'-.01em'}}>{b}° <span style={{fontSize:18, color:'var(--ink-mute)', fontWeight:500}}>{QIBLA.label}</span></div>
-          <div style={{fontSize:14, color:'var(--ink-soft)', marginTop:4}}>{QIBLA.distanceKm.toLocaleString()} km to Makkah</div>
+          <div className="tnum" style={{fontSize:34, fontWeight:600, letterSpacing:'-.01em'}}>
+            {b}° <span style={{fontSize:18, color:'var(--ink-mute)', fontWeight:500}}>{qibla.label}</span>
+          </div>
+          <div style={{fontSize:14, color:'var(--ink-soft)', marginTop:4}}>
+            {qibla.distanceKm.toLocaleString()} km to Makkah
+          </div>
+          {sensorErr && (
+            <div style={{fontSize:12, color:'var(--ink-mute)', marginTop:6}}>
+              No compass sensor — showing static bearing
+            </div>
+          )}
         </div>
       </div>
       <div className="scr-pad" style={{paddingTop:0}}>
         <hr className="hrule" style={{marginBottom:14}}/>
         <div style={{fontSize:13.5, color:'var(--ink-mute)', textAlign:'center', lineHeight:1.5}}>
-          Hold the phone flat and turn until the marker points up.
+          {heading !== null
+            ? 'Hold flat · turn until the ◻ marker aligns with ▲'
+            : 'Hold the phone flat and turn until the ◻ marker points up.'}
         </div>
       </div>
     </div>

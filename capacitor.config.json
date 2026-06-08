@@ -1,6 +1,6 @@
 {
   "appId": "com.simplesalat.app",
-  "appName": "Simple Salat",
+  "appName": "Salāt",
   "webDir": "www",
   "server": {
     "androidScheme": "https"
