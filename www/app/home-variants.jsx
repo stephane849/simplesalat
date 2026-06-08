@@ -131,7 +131,7 @@ function HomeCountdown({ times, nowMin, prefs, hijri, dateStr, go }){
           const active=p.key===nk, past=times[p.key]<nowMin && !active;
           return (
             <div key={p.key} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
-              padding:'0 32px', height:46, opacity:past?.4:1, fontWeight:active?700:400}}>
+              padding:'0 32px', height:46, opacity:past?0.4:1, fontWeight:active?700:400}}>
               <span style={{fontSize:15.5, letterSpacing:'.01em'}}>{p.en}</span>
               <Clock min={times[p.key]} is24={prefs.is24} size={15.5} weight={active?700:500}/>
             </div>
