@@ -46,14 +46,6 @@ jobs:
           curl -fsSL -o www/vendor/react-dom.min.js \
             https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js
 
-      - name: Download adhan audio
-        run: |
-          mkdir -p www/audio
-          curl -fsSL -o www/audio/adhan-makkah.mp3 \
-            https://praytimes.org/audio/sunni/Adhan-Makkah.mp3
-          curl -fsSL -o www/audio/adhan-madinah.mp3 \
-            https://praytimes.org/audio/sunni/Adhan-Madinah.mp3
-
       # ── Android platform ─────────────────────────────────────────────────
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -174,9 +166,8 @@ jobs:
             ## Features
             - **Arc of the Day** home — sun-path arc; tap any prayer name to see its time
             - **Hijri calendar** with ±2 day offset for local moon-sighting
-            - **Qibla** live compass — rotates with device heading, ◻ marker to Makkah
+            - **Adhan tones** — Makkah and Madinah notification sounds via Web Audio API
             - **Settings**: ISNA / MWL / Egyptian / Umm al-Qurā / Karachi / Moonsighting Committee
-            - **Custom adhan upload** (MP3, WAV, OGG) with in-app preview
             - Standard / Ḥanafī Asr · 12h / 24h clock
           files: android/app/build/outputs/apk/debug/salātapp.apk
           make_latest: true
