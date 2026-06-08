@@ -9,14 +9,14 @@ function HomeHeader({ hijri, dateStr, compact }){
   if(compact){
     return (
       <div style={{textAlign:'center', padding:'18px 24px 4px'}}>
-        <div style={{fontSize:13, letterSpacing:'.04em', color:'var(--ink-soft)'}}>{QIBLA.city}</div>
+        <div style={{fontSize:13, letterSpacing:'.04em', color:'var(--ink-soft)'}}>{LOC_DEFAULT.city}</div>
         <div style={{fontSize:13, color:'var(--ink-mute)', marginTop:3}}>{hj} · {dateStr}</div>
       </div>
     );
   }
   return (
     <div className="scr-pad" style={{paddingBottom:18}}>
-      <div className="kicker" style={{marginBottom:10}}>{QIBLA.city}</div>
+      <div className="kicker" style={{marginBottom:10}}>{LOC_DEFAULT.city}</div>
       <div style={{fontSize:25, fontWeight:600, letterSpacing:'-.01em', lineHeight:1.1}}>{hijri.d} {HIJRI_MONTHS[hijri.m]}</div>
       <div style={{fontSize:14, color:'var(--ink-mute)', marginTop:5}}>{hijri.y} AH · {dateStr}</div>
     </div>
