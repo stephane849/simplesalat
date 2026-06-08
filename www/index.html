@@ -2,42 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <!--
+    width=480: forces 1 CSS-pixel = 1 physical pixel on the Kompakt (480px screen).
+    viewport-fit=cover: WebView fills edge-to-edge with no letterbox bars.
+  -->
+  <meta name="viewport" content="width=480, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#FAF9F5">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Simple Salāt</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    html, body { height: 100%; background: #000; overflow: hidden; }
-    #stage {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: #000;
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #FAF9F5;
     }
-    #device {
-      width: 480px; height: 800px;
-      transform-origin: center center;
-    }
-    #device .screen.app-screen {
-      width: 480px; height: 800px; border-radius: 0;
-    }
-    @media (display-mode: standalone), (display-mode: fullscreen) {
-      #stage { background: var(--paper); }
+    #app-root { width: 100%; height: 100%; }
+
+    /* APK mode: override the fixed 480×800 so the app fills
+       the full physical Kompakt screen (480×800 css-px at DPR=1). */
+    .screen.app-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0;
     }
   </style>
 </head>
 <body>
-  <div id="stage">
-    <div id="device"><div id="app-root"></div></div>
-  </div>
+  <div id="app-root"></div>
 
-  <!-- React (loaded from local vendor/ — bundled into the APK) -->
+  <!-- React UMD (downloaded into vendor/ by CI, bundled into the APK) -->
   <script src="vendor/react.min.js"></script>
   <script src="vendor/react-dom.min.js"></script>
 
-  <!-- App scripts (pre-compiled from JSX during CI build, order matters) -->
+  <!-- App scripts compiled from JSX by Babel in CI (load order matters) -->
   <script src="app/data.js"></script>
   <script src="app/ui.js"></script>
   <script src="app/kompakt-frame.js"></script>
@@ -46,23 +46,8 @@
   <script src="app/kompakt-app.js"></script>
 
   <script>
-    // Mount the Arc-of-the-Day home, fullscreen (no bezel chrome).
     ReactDOM.createRoot(document.getElementById('app-root'))
       .render(React.createElement(KompaktApp, { variant: 'c', chrome: false }));
-
-    // Scale the fixed 480×800 canvas to fit any viewport (scale = 1 on the Kompakt).
-    function fit() {
-      var dev = document.getElementById('device');
-      var w = window.innerWidth, h = window.innerHeight;
-      if (!w || !h) { requestAnimationFrame(fit); return; }
-      var s = Math.min(w / 480, h / 800);
-      if (s <= 0) { requestAnimationFrame(fit); return; }
-      dev.style.transform = 'scale(' + s + ')';
-    }
-    window.addEventListener('resize', fit);
-    window.addEventListener('orientationchange', fit);
-    window.addEventListener('load', fit);
-    fit();
   </script>
 </body>
 </html>

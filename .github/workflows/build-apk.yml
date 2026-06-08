@@ -72,6 +72,26 @@ jobs:
           grep -q 'screenOrientation' "$MANIFEST" || \
             sed -i 's/android:hardwareAccelerated="true"/android:hardwareAccelerated="true"\n            android:screenOrientation="portrait"/' "$MANIFEST"
 
+      - name: Configure full-screen E-Ink display
+        run: |
+          # Hide the Android system status bar so the app's own status bar
+          # fills the complete 480×800 E-Ink canvas edge-to-edge.
+          python3 - <<'EOF'
+          path = 'android/app/src/main/res/values/styles.xml'
+          with open(path) as f:
+              content = f.read()
+          insert = (
+              '\n        <item name="android:windowFullscreen">true</item>'
+              '\n        <item name="android:windowTranslucentNavigation">true</item>'
+          )
+          target = '<item name="colorAccent">@color/colorAccent</item>'
+          if target in content and 'windowFullscreen' not in content:
+              content = content.replace(target, target + insert)
+          with open(path, 'w') as f:
+              f.write(content)
+          print('styles.xml patched for full-screen E-Ink display')
+          EOF
+
       - name: Sync Capacitor web assets
         run: npx cap sync android
 
