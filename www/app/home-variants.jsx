@@ -145,9 +145,10 @@ function HomeCountdown({ times, nowMin, prefs, hijri, dateStr, go }){
 /* ---------- shared sun-path arc (used by C and D) ---------- */
 function DayArc({ times, nowMin, size='full', focusKey=null, onSelect=null }){
   const compact = size === 'compact';
-  const W=416, padL=30, padR=30, uW=W-padL-padR;
-  const apexY = compact?42:52, baseY = compact?188:224, amp=baseY-apexY;
-  const vbH = compact?206:250;
+  // Full arc: wider, taller, bigger labels so prayer names are easy to read
+  const W=480, padL=26, padR=26, uW=W-padL-padR;
+  const apexY = compact?38:42, baseY = compact?196:272, amp=baseY-apexY;
+  const vbH = compact?214:294;
   const span = times.isha - times.fajr;
   const fx = (t)=> padL + ((t - times.fajr)/span)*uW;
   const fy = (t)=>{ const f=(t-times.fajr)/span; return apexY + amp*Math.pow(2*f-1,2); };
@@ -159,35 +160,38 @@ function DayArc({ times, nowMin, size='full', focusKey=null, onSelect=null }){
   const labelFor = (p)=>{
     const x=fx(times[p.key]), y=fy(times[p.key]);
     const top = y < (apexY+baseY)/2;
-    const anchor = x < padL+40 ? 'start' : x > W-padL-40 ? 'end' : 'middle';
-    return { x, y, ly: top ? y-12 : y+18, anchor };
+    const anchor = x < padL+50 ? 'start' : x > W-padR-50 ? 'end' : 'middle';
+    return { x, y, ly: top ? y-15 : y+21, anchor };
   };
+  const fontSize = compact ? 12 : 14;
+  const focSize  = compact ? 13 : 15;
   return (
     <svg viewBox={`0 0 ${W} ${vbH}`} width="100%" style={{display:'block', overflow:'visible'}}>
-      <line x1={padL-6} y1={horY} x2={W-padR+6} y2={horY} stroke="var(--line-2)" strokeWidth="1" strokeDasharray="2 4"/>
+      <line x1={padL-4} y1={horY} x2={W-padR+4} y2={horY} stroke="var(--line-2)" strokeWidth="1" strokeDasharray="2 4"/>
       <path d={path(times.fajr, times.isha)} fill="none" stroke="var(--ink-faint)" strokeWidth="1.5" strokeDasharray="2 5"/>
-      <path d={path(times.fajr, fnow)} fill="none" stroke="var(--ink)" strokeWidth="2"/>
+      <path d={path(times.fajr, fnow)} fill="none" stroke="var(--ink)" strokeWidth="2.5"/>
       {PRAYERS.map(p=>{
         const x=fx(times[p.key]), y=fy(times[p.key]); const past = times[p.key] < nowMin;
-        return <circle key={p.key} cx={x} cy={y} r={p.prayer?3.5:2.6}
-          fill={past?'var(--ink)':'var(--paper)'} stroke="var(--ink)" strokeWidth="1.5"/>;
+        return <circle key={p.key} cx={x} cy={y} r={p.prayer?4.5:3}
+          fill={past?'var(--ink)':'var(--paper)'} stroke="var(--ink)" strokeWidth="1.75"/>;
       })}
       <g>
-        <circle cx={fx(fnow)} cy={fy(fnow)} r="7" fill="var(--ink)"/>
+        <circle cx={fx(fnow)} cy={fy(fnow)} r="8" fill="var(--ink)"/>
         {[0,45,90,135,180,225,270,315].map(a=>{ const r=a*Math.PI/180, x=fx(fnow), y=fy(fnow);
-          return <line key={a} x1={x+Math.cos(r)*10} y1={y+Math.sin(r)*10}
-            x2={x+Math.cos(r)*13.5} y2={y+Math.sin(r)*13.5} stroke="var(--ink)" strokeWidth="1.5" strokeLinecap="round"/>; })}
+          return <line key={a} x1={x+Math.cos(r)*11} y1={y+Math.sin(r)*11}
+            x2={x+Math.cos(r)*15} y2={y+Math.sin(r)*15} stroke="var(--ink)" strokeWidth="1.75" strokeLinecap="round"/>; })}
       </g>
       {PRAYERS.map(p=>{ const L=labelFor(p); const foc = p.key===focusKey;
         const clickable = p.prayer && !!onSelect;
-        const w = Math.max(36, p.en.length*7.6);
+        const charW = foc ? focSize*0.62 : fontSize*0.62;
+        const w = Math.max(40, p.en.length*charW);
         const rx = L.anchor==='middle' ? L.x-w/2 : L.anchor==='end' ? L.x-w : L.x;
         return (
           <g key={p.key} onClick={clickable?()=>onSelect(p.key):undefined} style={{cursor:clickable?'pointer':'default'}}>
-            {clickable && <rect x={rx} y={L.ly-15} width={w} height={23} fill="transparent"/>}
+            {clickable && <rect x={rx} y={L.ly-focSize-2} width={w} height={focSize+10} fill="transparent"/>}
             <text x={L.x} y={L.ly} textAnchor={L.anchor}
-              fontFamily="var(--sans)" fontSize={foc?12:11} fontWeight={foc?700:(p.prayer?600:400)}
-              fill={foc?'var(--ink)':(p.prayer?'var(--ink-soft)':'var(--ink-mute)')} style={{letterSpacing:'.02em'}}>{p.en}</text>
+              fontFamily="var(--sans)" fontSize={foc?focSize:fontSize} fontWeight={foc?700:(p.prayer?600:400)}
+              fill={foc?'var(--ink)':(p.prayer?'var(--ink-soft)':'var(--ink-mute)')} style={{letterSpacing:'.01em'}}>{p.en}</text>
           </g>
         ); })}
     </svg>
@@ -212,7 +216,7 @@ function HomeArc({ times, nowMin, prefs, hijri, dateStr, go }){
     <div className="view">
       <HomeMenuButton go={go} />
       <HomeHeader hijri={hijri} dateStr={dateStr} compact />
-      <div style={{padding:'4px 32px 0'}}>
+      <div style={{padding:'4px 0 0'}}>
         <DayArc times={times} nowMin={nowMin} size="full" focusKey={sel.key}
           onSelect={(k)=>setIdx(dailies.findIndex(p=>p.key===k))} />
       </div>
