@@ -1,0 +1,12 @@
+{
+  "appId": "com.simplesalat.app",
+  "appName": "Simple Salat",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

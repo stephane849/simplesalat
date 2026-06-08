@@ -1,0 +1,20 @@
+{
+  "name": "simple-salat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Salat prayer-times app for the Mudita Kompakt — Arc of the Day design",
+  "scripts": {
+    "compile-jsx": "babel www/app --extensions .jsx --out-dir www/app",
+    "build": "npm run compile-jsx"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.29.0",
+    "@babel/core": "^7.29.0",
+    "@babel/preset-react": "^7.29.0",
+    "@capacitor/cli": "^6.0.0"
+  }
+}
