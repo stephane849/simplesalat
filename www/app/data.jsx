@@ -26,8 +26,6 @@ const METHODS = {
 /* Fallback location (Ottawa) used when GPS is unavailable */
 const LOC_DEFAULT = { lat:45.4215, lon:-75.6972, city:'Ottawa, ON' };
 
-const MECCA = { lat:21.4225, lon:39.8262 };
-
 /* ── Solar maths (Spencer 1971 · ±1 min accuracy up to 65 °N) ── */
 function _d2r(d){ return d*Math.PI/180; }
 function _r2d(r){ return r*180/Math.PI; }
@@ -42,19 +40,6 @@ function _solar(date){
   const eqt  = 229.18*(0.000075 + 0.001868*Math.cos(B) - 0.032077*Math.sin(B)
              - 0.014615*Math.cos(2*B) - 0.04089*Math.sin(2*B));  // minutes
   return { decl, eqt };
-}
-
-/* ── Qibla direction + distance to Mecca from any coordinates ── */
-function computeQibla(lat, lon){
-  const phi1=_d2r(lat), phi2=_d2r(MECCA.lat), dLon=_d2r(MECCA.lon-lon);
-  const y=Math.sin(dLon)*Math.cos(phi2);
-  const x=Math.cos(phi1)*Math.sin(phi2)-Math.sin(phi1)*Math.cos(phi2)*Math.cos(dLon);
-  const bearing=Math.round((_r2d(Math.atan2(y,x))+360)%360);
-  const sdLat=Math.sin((phi2-phi1)/2), sdLon=Math.sin(dLon/2);
-  const a=sdLat*sdLat+Math.cos(phi1)*Math.cos(phi2)*sdLon*sdLon;
-  const distanceKm=Math.round(12742*Math.asin(Math.sqrt(a)));
-  const dirs=['N','NE','E','SE','S','SW','W','NW'];
-  return {bearing, label:dirs[Math.round(bearing/45)%8], distanceKm};
 }
 
 // Hour angle in degrees for a given zenith angle (degrees)
@@ -151,7 +136,7 @@ const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes()+n.getSeconds()/60; }
 
 Object.assign(window, {
-  PRAYERS, METHODS, computeTimes, computeQibla, MECCA, LOC_DEFAULT,
+  PRAYERS, METHODS, computeTimes, LOC_DEFAULT,
   fmt, dayOrder, nextPrayer,
   countdown, HIJRI_MONTHS, gToHijri, WEEKDAYS, WEEKDAYS_S, GMONTHS, TODAY,
   nowMinutes,

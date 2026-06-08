@@ -12,7 +12,7 @@ function KompaktApp({ variant='a', chrome=true }){
   const [stack,  setStack]    = React.useState([]);
   const [prefs,  setPrefsRaw] = React.useState({
     method:'isna', madhab:'standard', is24:false, hijriAdj:0,
-    adhan:true, sound:'makkah', customAdhan:null, reminder:'5 minutes before',
+    adhan:true, sound:'makkah', reminder:'5 minutes before',
     notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
   });
   const setPrefs = (patch)=> setPrefsRaw(p=>({...p,...patch}));
@@ -38,7 +38,6 @@ function KompaktApp({ variant='a', chrome=true }){
 
   const lat   = loc ? loc.lat : null;
   const lon   = loc ? loc.lon : null;
-  const qibla = computeQibla(lat !== null ? lat : LOC_DEFAULT.lat, lon !== null ? lon : LOC_DEFAULT.lon);
   const times = computeTimes(prefs, null, lat, lon);
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
@@ -58,7 +57,6 @@ function KompaktApp({ variant='a', chrome=true }){
     case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locStatus={locStatus} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
-    case 'qibla':         view = <ScreenQibla go={go} qibla={qibla} />; break;
     default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} />;
   }
 
