@@ -24,6 +24,21 @@ const METHODS = {
 };
 
 const QIBLA = { bearing:57, label:'NE', distanceKm:10140, city:'Ottawa, ON', lat:45.4215, lon:-75.6972 };
+const MECCA = { lat: 21.4225, lon: 39.8262 };
+
+function computeQibla(lat, lon){
+  const phi1  = _d2r(lat),  phi2 = _d2r(MECCA.lat);
+  const dLon  = _d2r(MECCA.lon - lon);
+  const y     = Math.sin(dLon) * Math.cos(phi2);
+  const x     = Math.cos(phi1)*Math.sin(phi2) - Math.sin(phi1)*Math.cos(phi2)*Math.cos(dLon);
+  const brng  = (_r2d(Math.atan2(y, x)) + 360) % 360;
+  const sdLat = Math.sin(_d2r(MECCA.lat - lat) / 2);
+  const sdLon = Math.sin(dLon / 2);
+  const a     = sdLat*sdLat + Math.cos(_d2r(lat))*Math.cos(_d2r(MECCA.lat))*sdLon*sdLon;
+  const dist  = Math.round(6371 * 2 * Math.asin(Math.sqrt(a)));
+  const DIRS  = ['N','NE','E','SE','S','SW','W','NW'];
+  return { bearing: Math.round(brng), label: DIRS[Math.round(brng/45) % 8], distanceKm: dist };
+}
 
 /* ── Solar maths (Spencer 1971 · ±1 min accuracy up to 65 °N) ── */
 function _d2r(d){ return d*Math.PI/180; }
@@ -135,7 +150,7 @@ const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes()+n.getSeconds()/60; }
 
 Object.assign(window, {
-  PRAYERS, METHODS, computeTimes, fmt, dayOrder, nextPrayer,
+  PRAYERS, METHODS, computeTimes, computeQibla, fmt, dayOrder, nextPrayer,
   countdown, HIJRI_MONTHS, gToHijri, WEEKDAYS, WEEKDAYS_S, GMONTHS, TODAY,
   QIBLA, nowMinutes,
 });

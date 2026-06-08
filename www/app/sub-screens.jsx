@@ -33,7 +33,7 @@ function ScreenMenu({ go }){
 }
 
 /* ---------- Settings ---------- */
-function ScreenSettings({ prefs, setPrefs, go }){
+function ScreenSettings({ prefs, setPrefs, go, locStr=QIBLA.city }){
   const mKeys = Object.keys(METHODS);
   const m = METHODS[prefs.method];
   const cycleMethod = ()=>{ const i=mKeys.indexOf(prefs.method); setPrefs({method:mKeys[(i+1)%mKeys.length]}); };
@@ -46,7 +46,7 @@ function ScreenSettings({ prefs, setPrefs, go }){
       <div className="scroll">
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
           <div className="body"><div className="label">Location</div><div className="sub">Auto · GPS</div></div>
-          <span className="trail"><span className="val">{QIBLA.city}</span></span>
+          <span className="trail"><span className="val">{locStr}</span></span>
         </div>
 
         <div className="row" onClick={cycleMethod} style={{borderBottom:'1px solid var(--line)'}}>
@@ -283,8 +283,8 @@ function ScreenCalendar({ go, hijriAdj=0 }){
 }
 
 /* ---------- Qibla ---------- */
-function ScreenQibla({ go }){
-  const C=160, R=128, b=QIBLA.bearing;
+function ScreenQibla({ go, qibla=QIBLA }){
+  const C=160, R=128, b=qibla.bearing;
   const rad=(deg)=> (deg-90)*Math.PI/180;
   const pt=(deg,r)=>[C+Math.cos((deg-90)*Math.PI/180)*r, C+Math.sin((deg-90)*Math.PI/180)*r];
   const tip=pt(b, R-26);
@@ -316,8 +316,8 @@ function ScreenQibla({ go }){
           <circle cx={C} cy={C} r="4" fill="var(--ink)"/>
         </svg>
         <div style={{textAlign:'center', marginTop:6}}>
-          <div className="tnum" style={{fontSize:34, fontWeight:600, letterSpacing:'-.01em'}}>{b}° <span style={{fontSize:18, color:'var(--ink-mute)', fontWeight:500}}>{QIBLA.label}</span></div>
-          <div style={{fontSize:14, color:'var(--ink-soft)', marginTop:4}}>{QIBLA.distanceKm.toLocaleString()} km to Makkah</div>
+          <div className="tnum" style={{fontSize:34, fontWeight:600, letterSpacing:'-.01em'}}>{b}° <span style={{fontSize:18, color:'var(--ink-mute)', fontWeight:500}}>{qibla.label}</span></div>
+          <div style={{fontSize:14, color:'var(--ink-soft)', marginTop:4}}>{qibla.distanceKm.toLocaleString()} km to Makkah</div>
         </div>
       </div>
       <div className="scr-pad" style={{paddingTop:0}}>

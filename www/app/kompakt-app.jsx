@@ -24,7 +24,24 @@ function KompaktApp({ variant='a', chrome=true }){
     return ()=> clearInterval(id);
   }, []);
 
-  const times   = computeTimes(prefs);
+  // GPS — request once on mount; silently falls back to Ottawa on failure/denial
+  const [loc, setLoc] = React.useState(null);
+  React.useEffect(()=>{
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ setLoc({ lat: pos.coords.latitude, lon: pos.coords.longitude }); },
+      function(){},
+      { enableHighAccuracy:true, timeout:10000, maximumAge:300000 }
+    );
+  }, []);
+
+  const lat    = loc ? loc.lat : QIBLA.lat;
+  const lon    = loc ? loc.lon : QIBLA.lon;
+  const locStr = loc
+    ? (Math.abs(lat).toFixed(1) + '°' + (lat>=0?'N':'S') + ' ' + Math.abs(lon).toFixed(1) + '°' + (lon>=0?'E':'W'))
+    : QIBLA.city;
+  const qibla  = computeQibla(lat, lon);
+  const times  = computeTimes(prefs, TODAY, lat, lon);
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
@@ -40,10 +57,10 @@ function KompaktApp({ variant='a', chrome=true }){
   let view;
   switch(screen){
     case 'menu':          view = <ScreenMenu go={go} />; break;
-    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} />; break;
+    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} locStr={locStr} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
-    case 'qibla':         view = <ScreenQibla go={go} />; break;
+    case 'qibla':         view = <ScreenQibla go={go} qibla={qibla} />; break;
     default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} />;
   }
 
