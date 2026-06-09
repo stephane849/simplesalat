@@ -88,7 +88,34 @@ jobs:
           print('Location permissions added to AndroidManifest.xml')
           EOF
 
-      - name: Configure full-screen E-Ink display
+      - name: Enable WebView media playback
+        run: |
+          python3 - <<'EOF'
+          import re
+          path = 'android/app/src/main/java/com/simplesalat/app/MainActivity.java'
+          with open(path) as f:
+              content = f.read()
+          content = content.replace(
+              'import com.getcapacitor.BridgeActivity;',
+              'import android.webkit.WebSettings;\nimport com.getcapacitor.BridgeActivity;'
+          )
+          content = re.sub(
+              r'public class MainActivity extends BridgeActivity \{\s*\}',
+              'public class MainActivity extends BridgeActivity {\n'
+              '    @Override\n'
+              '    protected void onCreate(android.os.Bundle savedInstanceState) {\n'
+              '        super.onCreate(savedInstanceState);\n'
+              '        WebSettings ws = this.bridge.getWebView().getSettings();\n'
+              '        ws.setMediaPlaybackRequiresUserGesture(false);\n'
+              '    }\n'
+              '}',
+              content
+          )
+          with open(path, 'w') as f:
+              f.write(content)
+          print('MainActivity patched: media playback unrestricted')
+          EOF
+
         run: |
           python3 - <<'EOF'
           path = 'android/app/src/main/res/values/styles.xml'
@@ -123,10 +150,14 @@ jobs:
           base = 'android/app/src/main/res'
           img = Image.open(src).convert('RGBA')
           for size, d in configs:
-              resized = img.resize((size, size), Image.LANCZOS)
+              # 65% fill — 17.5% transparent padding each side
+              icon_px = int(size * 0.65)
+              icon = img.resize((icon_px, icon_px), Image.LANCZOS)
+              canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+              off = (size - icon_px) // 2
+              canvas.paste(icon, (off, off), icon)
               for name in ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png']:
-                  out = os.path.join(base, d, name)
-                  resized.save(out)
+                  canvas.save(os.path.join(base, d, name))
           print('App icons generated at all densities')
           EOF
 
@@ -169,7 +200,7 @@ jobs:
             ## Features
             - **Arc of the Day** home — sun-path arc; tap any prayer name to see its time
             - **Hijri calendar** with ±2 day offset for local moon-sighting
-            - **Adhan tones** — Makkah and Madinah notification sounds via Web Audio API
+            - **Adhan** — bundled Makkah and Madinah MP3 recordings with in-app preview
             - **Settings**: ISNA / MWL / Egyptian / Umm al-Qurā / Karachi / Moonsighting Committee
             - Standard / Ḥanafī Asr · 12h / 24h clock
           files: android/app/build/outputs/apk/debug/salātapp.apk
