@@ -122,7 +122,16 @@ function ScreenNotifications({ prefs, setPrefs, go }){
   const [playingKey, setPlayingKey] = React.useState(null);
   const audioRef = React.useRef(null);
 
+  React.useEffect(function(){
+    var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SalatAudio;
+    if(!plugin) return;
+    var handle = plugin.addListener('playbackComplete', function(){ setPlayingKey(null); });
+    return function(){ if(handle && handle.remove) handle.remove(); };
+  }, []);
+
   const stopAll = ()=>{
+    var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SalatAudio;
+    if(plugin){ plugin.stop({}); }
     if(audioRef.current){ audioRef.current.pause(); audioRef.current.src = ''; audioRef.current = null; }
     setPlayingKey(null);
   };
@@ -131,6 +140,11 @@ function ScreenNotifications({ prefs, setPrefs, go }){
     e.stopPropagation();
     if(playingKey === key){ stopAll(); return; }
     stopAll();
+    var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SalatAudio;
+    if(plugin){
+      plugin.play({sound: key}).then(function(){ setPlayingKey(key); }).catch(function(){ setPlayingKey(null); });
+      return;
+    }
     var audio = new Audio(ADHAN_SRCS[key]);
     audioRef.current = audio;
     audio.onended = function(){ if(audioRef.current === audio) setPlayingKey(null); };
