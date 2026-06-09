@@ -11,3 +11,6 @@ www/vendor/
 
 # Build outputs
 *.apk
+
+# Claude Code session data
+.claude/
