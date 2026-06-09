@@ -1,4 +1,4 @@
-# Simple Salat
+# Salāt
 
 Prayer times for the [Mudita Kompakt](https://mudita.com/products/phones/mudita-kompakt/).
 
