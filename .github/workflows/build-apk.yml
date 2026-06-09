@@ -116,6 +116,7 @@ jobs:
           print('MainActivity patched: media playback unrestricted')
           EOF
 
+      - name: Configure full-screen E-Ink display
         run: |
           python3 - <<'EOF'
           path = 'android/app/src/main/res/values/styles.xml'
