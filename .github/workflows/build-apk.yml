@@ -310,14 +310,14 @@ jobs:
                   '\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />'
                   '\n    <uses-permission android:name="android.permission.WAKE_LOCK" />'
                   '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />'
-                  '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_ALARM" />'
+                  '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />'
               )
               content = content.replace('</manifest>', perms + '\n</manifest>')
           if 'AdhanReceiver' not in content:
               components = (
                   '\n        <receiver android:name=".AdhanReceiver" android:exported="false" />'
                   '\n        <service android:name=".AdhanService" android:exported="false"'
-                  '\n            android:foregroundServiceType="alarm" />'
+                  '\n            android:foregroundServiceType="mediaPlayback" />'
               )
               content = content.replace('</application>', components + '\n    </application>')
           with open(path, 'w') as f:
