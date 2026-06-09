@@ -251,22 +251,21 @@ jobs:
                   int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
                       | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
                   PendingIntent stopPi = PendingIntent.getService(this, 0, stopIntent, piFlags);
+                  Intent launchIntent = new Intent(this, MainActivity.class);
+                  launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                  PendingIntent launchPi = PendingIntent.getActivity(this, 1, launchIntent, piFlags);
                   NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL)
                       .setContentTitle("Prayer Time")
-                      .setContentText("Adhan - tap to stop")
+                      .setContentText("Adhan is playing")
                       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                       .setPriority(NotificationCompat.PRIORITY_HIGH)
-                      .setContentIntent(stopPi)
+                      .setFullScreenIntent(launchPi, true)
+                      .setContentIntent(launchPi)
                       .addAction(android.R.drawable.ic_media_pause, "Stop", stopPi);
                   startForeground(42, b.build());
                   String sound = intent != null && intent.getStringExtra("sound") != null
                       ? intent.getStringExtra("sound") : "makkah";
                   float vol = intent != null ? intent.getFloatExtra("volume", 1.0f) : 1.0f;
-                  try {
-                      Intent launch = new Intent(this, MainActivity.class);
-                      launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                      startActivity(launch);
-                  } catch (Exception ignored) {}
                   play(sound, vol);
                   return START_NOT_STICKY;
               }
@@ -380,6 +379,7 @@ jobs:
                   '\n    <uses-permission android:name="android.permission.WAKE_LOCK" />'
                   '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />'
                   '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />'
+                  '\n    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />'
               )
               content = content.replace('</manifest>', perms + '\n</manifest>')
           if 'AdhanReceiver' not in content:
