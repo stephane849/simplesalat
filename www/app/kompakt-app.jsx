@@ -7,15 +7,32 @@
 
 const HOMES = { a:HomeLedger, b:HomeCountdown, c:HomeArc, d:HomeArcTimes };
 
+var PREFS_DEFAULTS = {
+  method:'isna', madhab:'standard', is24:false, hijriAdj:0,
+  adhan:true, sound:'makkah', reminder:'At adhan', adhanVolume:80,
+  notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
+};
+function loadPrefs() {
+  try {
+    var stored = JSON.parse(localStorage.getItem('salat_prefs') || 'null');
+    if (stored) return Object.assign({}, PREFS_DEFAULTS, stored, {
+      notif: Object.assign({}, PREFS_DEFAULTS.notif, stored.notif)
+    });
+  } catch(e) {}
+  return PREFS_DEFAULTS;
+}
+
 function KompaktApp({ variant='a', chrome=true }){
   const [screen, setScreen]   = React.useState('home');
   const [stack,  setStack]    = React.useState([]);
-  const [prefs,  setPrefsRaw] = React.useState({
-    method:'isna', madhab:'standard', is24:false, hijriAdj:0,
-    adhan:true, sound:'makkah', reminder:'5 minutes before', adhanVolume:80,
-    notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
-  });
-  const setPrefs = (patch)=> setPrefsRaw(p=>({...p,...patch}));
+  const [prefs,  setPrefsRaw] = React.useState(loadPrefs);
+  const setPrefs = function(patch){
+    setPrefsRaw(function(p){
+      var next = Object.assign({}, p, patch);
+      try { localStorage.setItem('salat_prefs', JSON.stringify(next)); } catch(e) {}
+      return next;
+    });
+  };
 
   // Real current time, ticking every second
   const [nowMin, setNowMin] = React.useState(nowMinutes);
