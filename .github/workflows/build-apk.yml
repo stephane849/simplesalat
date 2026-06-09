@@ -264,11 +264,14 @@ jobs:
                   if (id < 0) return;
                   int nextId = (id + 1) % 5;
                   SharedPreferences sp = context.getSharedPreferences("adhan_prefs", Context.MODE_PRIVATE);
+                  long thisMs = sp.getLong("t" + id, 0L);
                   long nextMs = sp.getLong("t" + nextId, 0L);
-                  if (nextMs <= 0) return;
-                  long now = System.currentTimeMillis();
-                  if (nextMs <= now) nextMs += 86400000L;
-                  sp.edit().putLong("t" + nextId, nextMs).apply();
+                  if (thisMs <= 0 || nextMs <= 0) return;
+                  long DAY = 86400000L;
+                  long delta = (nextMs % DAY) - (thisMs % DAY);
+                  if (delta <= 0) delta += DAY;
+                  long fireMs = System.currentTimeMillis() + delta;
+                  sp.edit().putLong("t" + nextId, fireMs).apply();
                   Intent next = new Intent(context, AdhanReceiver.class);
                   next.putExtra("sound", sound != null ? sound : "makkah");
                   next.putExtra("volume", vol);
@@ -278,9 +281,9 @@ jobs:
                   PendingIntent pi = PendingIntent.getBroadcast(context, nextId, next, flags);
                   AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
-                      am.set(AlarmManager.RTC_WAKEUP, nextMs, pi);
+                      am.set(AlarmManager.RTC_WAKEUP, fireMs, pi);
                   } else {
-                      am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMs, pi);
+                      am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireMs, pi);
                   }
               }
           }
