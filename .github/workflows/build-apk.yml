@@ -147,6 +147,7 @@ jobs:
               '    @Override\n'
               '    protected void onCreate(android.os.Bundle savedInstanceState) {\n'
               '        registerPlugin(SalatAudioPlugin.class);\n'
+              '        registerPlugin(AdhanSchedulerPlugin.class);\n'
               '        super.onCreate(savedInstanceState);\n'
               '        WebSettings ws = this.bridge.getWebView().getSettings();\n'
               '        ws.setMediaPlaybackRequiresUserGesture(false);\n'
@@ -156,7 +157,172 @@ jobs:
           )
           with open(path, 'w') as f:
               f.write(content)
-          print('MainActivity patched: SalatAudio plugin registered + media playback unrestricted')
+          print('MainActivity patched: plugins registered + media playback unrestricted')
+          EOF
+
+      - name: Create alarm scheduler components
+        run: |
+          python3 - <<'EOF'
+          import os
+          base = 'android/app/src/main/java/com/simplesalat/app'
+          with open(os.path.join(base, 'AdhanReceiver.java'), 'w') as f:
+              f.write("""package com.simplesalat.app;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.os.Build;
+
+          public class AdhanReceiver extends BroadcastReceiver {
+              @Override
+              public void onReceive(Context context, Intent intent) {
+                  String sound = intent.getStringExtra("sound");
+                  Intent svc = new Intent(context, AdhanService.class);
+                  svc.putExtra("sound", sound != null ? sound : "makkah");
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      context.startForegroundService(svc);
+                  } else {
+                      context.startService(svc);
+                  }
+              }
+          }
+          """)
+          with open(os.path.join(base, 'AdhanService.java'), 'w') as f:
+              f.write("""package com.simplesalat.app;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.Service;
+          import android.content.Intent;
+          import android.content.res.AssetFileDescriptor;
+          import android.media.AudioAttributes;
+          import android.media.MediaPlayer;
+          import android.os.Build;
+          import android.os.IBinder;
+          import androidx.core.app.NotificationCompat;
+
+          public class AdhanService extends Service {
+              private static final String CHANNEL = "adhan";
+              private MediaPlayer mp;
+
+              @Override
+              public int onStartCommand(Intent intent, int flags, int startId) {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      NotificationChannel ch = new NotificationChannel(
+                          CHANNEL, "Adhan", NotificationManager.IMPORTANCE_HIGH);
+                      getSystemService(NotificationManager.class).createNotificationChannel(ch);
+                  }
+                  NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL)
+                      .setContentTitle("Prayer Time")
+                      .setContentText("Adhan")
+                      .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                      .setPriority(NotificationCompat.PRIORITY_HIGH);
+                  startForeground(42, b.build());
+                  String sound = intent != null && intent.getStringExtra("sound") != null
+                      ? intent.getStringExtra("sound") : "makkah";
+                  play(sound);
+                  return START_NOT_STICKY;
+              }
+
+              private void play(String sound) {
+                  try {
+                      AssetFileDescriptor afd = getAssets().openFd("public/audio/adhan-" + sound + ".mp3");
+                      mp = new MediaPlayer();
+                      mp.setAudioAttributes(new AudioAttributes.Builder()
+                          .setUsage(AudioAttributes.USAGE_ALARM)
+                          .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                          .build());
+                      mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                      mp.prepare();
+                      mp.start();
+                      mp.setOnCompletionListener(p -> stopSelf());
+                  } catch (Exception e) { stopSelf(); }
+              }
+
+              @Override
+              public void onDestroy() {
+                  if (mp != null) {
+                      try { mp.stop(); } catch (Exception ignored) {}
+                      mp.release(); mp = null;
+                  }
+              }
+
+              @Override public IBinder onBind(Intent i) { return null; }
+          }
+          """)
+          with open(os.path.join(base, 'AdhanSchedulerPlugin.java'), 'w') as f:
+              f.write("""package com.simplesalat.app;
+          import android.app.AlarmManager;
+          import android.app.PendingIntent;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.os.Build;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "AdhanScheduler")
+          public class AdhanSchedulerPlugin extends Plugin {
+
+              @PluginMethod
+              public void schedule(PluginCall call) {
+                  long ms = call.getLong("triggerMs", 0L);
+                  String sound = call.getString("sound", "makkah");
+                  int id = call.getInt("id", 0);
+                  AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
+                  PendingIntent pi = makePi(id, sound);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
+                      am.set(AlarmManager.RTC_WAKEUP, ms, pi);
+                  } else {
+                      am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi);
+                  }
+                  call.resolve();
+              }
+
+              @PluginMethod
+              public void cancel(PluginCall call) {
+                  int id = call.getInt("id", 0);
+                  AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
+                  am.cancel(makePi(id, ""));
+                  call.resolve();
+              }
+
+              private PendingIntent makePi(int id, String sound) {
+                  Intent i = new Intent(getContext(), AdhanReceiver.class);
+                  i.putExtra("sound", sound);
+                  int flags = PendingIntent.FLAG_UPDATE_CURRENT
+                      | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+                  return PendingIntent.getBroadcast(getContext(), id, i, flags);
+              }
+          }
+          """)
+          print('AdhanReceiver, AdhanService, AdhanSchedulerPlugin created')
+          EOF
+
+      - name: Add alarm permissions and components
+        run: |
+          python3 - <<'EOF'
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path) as f:
+              content = f.read()
+          if 'SCHEDULE_EXACT_ALARM' not in content:
+              perms = (
+                  '\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />'
+                  '\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />'
+                  '\n    <uses-permission android:name="android.permission.WAKE_LOCK" />'
+                  '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />'
+                  '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_ALARM" />'
+              )
+              content = content.replace('</manifest>', perms + '\n</manifest>')
+          if 'AdhanReceiver' not in content:
+              components = (
+                  '\n        <receiver android:name=".AdhanReceiver" android:exported="false" />'
+                  '\n        <service android:name=".AdhanService" android:exported="false"'
+                  '\n            android:foregroundServiceType="alarm" />'
+              )
+              content = content.replace('</application>', components + '\n    </application>')
+          with open(path, 'w') as f:
+              f.write(content)
+          print('Alarm permissions and components added')
           EOF
 
       - name: Configure full-screen E-Ink display
@@ -194,8 +360,8 @@ jobs:
           base = 'android/app/src/main/res'
           img = Image.open(src).convert('RGBA')
           for size, d in configs:
-              # 45% fill — 27.5% transparent padding each side
-              icon_px = int(size * 0.45)
+              # 35% fill — 32.5% transparent padding each side
+              icon_px = int(size * 0.35)
               icon = img.resize((icon_px, icon_px), Image.LANCZOS)
               canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
               off = (size - icon_px) // 2

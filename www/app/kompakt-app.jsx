@@ -39,6 +39,29 @@ function KompaktApp({ variant='a', chrome=true }){
   const lat   = loc ? loc.lat : null;
   const lon   = loc ? loc.lon : null;
   const times = computeTimes(prefs, null, lat, lon);
+
+  React.useEffect(function(){
+    var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdhanScheduler;
+    if(!plugin) return;
+    var offsets = {'At adhan':0,'5 minutes before':5,'10 minutes before':10,'15 minutes before':15};
+    var off = offsets[prefs.reminder] || 0;
+    var now = Date.now();
+    var midnight = new Date(); midnight.setHours(0,0,0,0);
+    var midMs = +midnight;
+    ['fajr','dhuhr','asr','maghrib','isha'].forEach(function(key, i){
+      if(!prefs.adhan || !prefs.notif[key]){
+        plugin.cancel({id:i}).catch(function(){});
+        return;
+      }
+      var fireMs = midMs + (times[key] - off) * 60000;
+      if(fireMs <= now) fireMs += 86400000;
+      plugin.schedule({id:i, triggerMs:fireMs, sound:prefs.sound||'makkah'}).catch(function(){});
+    });
+  }, [times.fajr, times.dhuhr, times.asr, times.maghrib, times.isha,
+      prefs.adhan, prefs.sound, prefs.reminder,
+      prefs.notif.fajr, prefs.notif.dhuhr, prefs.notif.asr,
+      prefs.notif.maghrib, prefs.notif.isha]);
+
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
