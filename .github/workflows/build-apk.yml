@@ -108,10 +108,11 @@ jobs:
 
       - name: Set app icon (crescent moon)
         run: |
-          pip3 install cairosvg --quiet
+          pip3 install Pillow --quiet
           python3 - <<'EOF'
-          import cairosvg, shutil, os
-          src = 'resources/icon.svg'
+          from PIL import Image
+          import os
+          src = 'resources/moonicon.png'
           configs = [
               (48,  'mipmap-mdpi'),
               (72,  'mipmap-hdpi'),
@@ -120,10 +121,12 @@ jobs:
               (192, 'mipmap-xxxhdpi'),
           ]
           base = 'android/app/src/main/res'
+          img = Image.open(src).convert('RGBA')
           for size, d in configs:
+              resized = img.resize((size, size), Image.LANCZOS)
               for name in ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png']:
                   out = os.path.join(base, d, name)
-                  cairosvg.svg2png(url=src, write_to=out, output_width=size, output_height=size)
+                  resized.save(out)
           print('App icons generated at all densities')
           EOF
 

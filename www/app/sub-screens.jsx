@@ -104,7 +104,11 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
 }
 
 /* ---------- Adhan & Notifications ---------- */
-/* Tones generated via Web Audio API — no external files required */
+const ADHAN_SRCS = {
+  makkah:  'audio/adhan-makkah.mp3',
+  madinah: 'audio/adhan-madinah.mp3',
+};
+
 function ScreenNotifications({ prefs, setPrefs, go }){
   const reminders = ['At adhan','5 minutes before','10 minutes before','15 minutes before'];
   const sounds = [
@@ -116,44 +120,27 @@ function ScreenNotifications({ prefs, setPrefs, go }){
   const setNotif = (k,v)=> setPrefs({ notif:{...prefs.notif, [k]:v} });
 
   const [playingKey, setPlayingKey] = React.useState(null);
-  const stopRef = React.useRef(null);
+  const audioRef = React.useRef(null);
 
   const stopAll = ()=>{
-    if(stopRef.current){ stopRef.current(); stopRef.current = null; }
+    if(audioRef.current){ audioRef.current.pause(); audioRef.current.src = ''; audioRef.current = null; }
     setPlayingKey(null);
   };
 
-  const previewTone = (e, key)=>{
+  const previewSound = (e, key)=>{
     e.stopPropagation();
     if(playingKey === key){ stopAll(); return; }
     stopAll();
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return;
-      const ctx = new AC();
-      /* Makkah: E4-G#4-B4-G#4-E4 (warm major arpeggio)
-         Madinah: G4-C5-E5-C5-G4 (brighter, higher) */
-      const notes = key === 'madinah'
-        ? [[392,0],[523,0.5],[659,1.0],[523,1.5],[392,2.0]]
-        : [[330,0],[415,0.5],[495,1.0],[415,1.5],[330,2.0]];
-      const oscs = [];
-      notes.forEach(function(pair){
-        var freq = pair[0], t = pair[1];
-        var osc  = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'sine'; osc.frequency.value = freq;
-        var t0 = ctx.currentTime + t;
-        gain.gain.setValueAtTime(0, t0);
-        gain.gain.linearRampToValueAtTime(0.22, t0 + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.45);
-        osc.start(t0); osc.stop(t0 + 0.5);
-        oscs.push(osc);
-      });
+    var audio = new Audio(ADHAN_SRCS[key]);
+    audioRef.current = audio;
+    audio.onended = function(){ if(audioRef.current === audio) setPlayingKey(null); };
+    audio.onerror = function(){ if(audioRef.current === audio) setPlayingKey(null); };
+    var result = audio.play();
+    if(result !== undefined){
+      result.then(function(){ setPlayingKey(key); }).catch(function(){ setPlayingKey(null); });
+    } else {
       setPlayingKey(key);
-      stopRef.current = function(){ oscs.forEach(function(o){ try{ o.stop(0); }catch(err){} }); ctx.close(); };
-      setTimeout(function(){ setPlayingKey(function(k){ return k === key ? null : k; }); }, 2600);
-    } catch(err){}
+    }
   };
 
   const Radio = ({on})=>(
@@ -182,7 +169,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
               <div className="body"><div className="label">{s.label}</div></div>
               <span className="trail">
                 <button className="appbar iconbtn" style={{padding:8, border:'1.5px solid var(--ink)', borderRadius:'50%'}}
-                  onClick={(e)=>previewTone(e, s.k)} aria-label="Preview">
+                  onClick={(e)=>previewSound(e, s.k)} aria-label="Preview">
                   {playingKey===s.k ? <Ico.pause/> : <Ico.play/>}
                 </button>
               </span>
