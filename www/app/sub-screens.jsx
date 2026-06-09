@@ -107,6 +107,7 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
 const ADHAN_SRCS = {
   makkah:  'audio/adhan-makkah.mp3',
   madinah: 'audio/adhan-madinah.mp3',
+  sudan:   'audio/adhan-sudan.mp3',
 };
 
 function ScreenNotifications({ prefs, setPrefs, go }){
@@ -114,6 +115,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
   const sounds = [
     {k:'makkah',  label:'Makkah'},
     {k:'madinah', label:'Madīnah'},
+    {k:'sudan',   label:'Sudan'},
   ];
   const cyc = (key, arr)=>{ const i=arr.indexOf(prefs[key]); setPrefs({[key]:arr[(i+1)%arr.length]}); };
   const list = PRAYERS.filter(p=>p.prayer);
