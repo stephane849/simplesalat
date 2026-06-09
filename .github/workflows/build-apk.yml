@@ -239,6 +239,8 @@ jobs:
           base = 'android/app/src/main/java/com/simplesalat/app'
           with open(os.path.join(base, 'AdhanReceiver.java'), 'w') as f:
               f.write("""package com.simplesalat.app;
+          import android.app.AlarmManager;
+          import android.app.PendingIntent;
           import android.content.BroadcastReceiver;
           import android.content.Context;
           import android.content.Intent;
@@ -249,6 +251,8 @@ jobs:
               public void onReceive(Context context, Intent intent) {
                   String sound = intent.getStringExtra("sound");
                   float vol = intent.getFloatExtra("volume", 1.0f);
+                  int id = intent.getIntExtra("id", -1);
+                  long triggerMs = intent.getLongExtra("triggerMs", 0L);
                   Intent svc = new Intent(context, AdhanService.class);
                   svc.putExtra("sound", sound != null ? sound : "makkah");
                   svc.putExtra("volume", vol);
@@ -256,6 +260,23 @@ jobs:
                       context.startForegroundService(svc);
                   } else {
                       context.startService(svc);
+                  }
+                  if (id >= 0 && triggerMs > 0) {
+                      long nextMs = triggerMs + 86400000L;
+                      Intent next = new Intent(context, AdhanReceiver.class);
+                      next.putExtra("sound", sound != null ? sound : "makkah");
+                      next.putExtra("volume", vol);
+                      next.putExtra("id", id);
+                      next.putExtra("triggerMs", nextMs);
+                      int flags = PendingIntent.FLAG_UPDATE_CURRENT
+                          | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+                      PendingIntent pi = PendingIntent.getBroadcast(context, id, next, flags);
+                      AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
+                          am.set(AlarmManager.RTC_WAKEUP, nextMs, pi);
+                      } else {
+                          am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMs, pi);
+                      }
                   }
               }
           }
@@ -375,7 +396,7 @@ jobs:
                   int id = call.getInt("id", 0);
                   float vol = (float) Math.max(0.0, Math.min(1.0, call.getDouble("volume", 1.0)));
                   AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
-                  PendingIntent pi = makePi(id, sound, vol);
+                  PendingIntent pi = makePi(id, sound, vol, ms);
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
                       am.set(AlarmManager.RTC_WAKEUP, ms, pi);
                   } else {
@@ -388,7 +409,7 @@ jobs:
               public void cancel(PluginCall call) {
                   int id = call.getInt("id", 0);
                   AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
-                  am.cancel(makePi(id, "", 0f));
+                  am.cancel(makePi(id, "", 0f, 0L));
                   call.resolve();
               }
 
@@ -407,10 +428,12 @@ jobs:
                   call.resolve(result);
               }
 
-              private PendingIntent makePi(int id, String sound, float vol) {
+              private PendingIntent makePi(int id, String sound, float vol, long triggerMs) {
                   Intent i = new Intent(getContext(), AdhanReceiver.class);
                   i.putExtra("sound", sound);
                   i.putExtra("volume", vol);
+                  i.putExtra("id", id);
+                  i.putExtra("triggerMs", triggerMs);
                   int flags = PendingIntent.FLAG_UPDATE_CURRENT
                       | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
                   return PendingIntent.getBroadcast(getContext(), id, i, flags);
