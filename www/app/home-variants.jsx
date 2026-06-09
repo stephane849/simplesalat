@@ -209,7 +209,8 @@ function HomeArc({ times, nowMin, prefs, hijri, dateStr, go }){
   const isLive = idx === liveIdx;
 
   const hm = (x)=>{ const h=Math.floor(x/60), m=Math.floor(x%60); return h?`${h}h ${String(m).padStart(2,'0')}m`:`${m} min`; };
-  const d = selMin - nowMin;
+  let d = selMin - nowMin;
+  if(d < -720) d += 1440;
   let rel; if(Math.abs(d) < 1) rel='now'; else if(d > 0) rel='in '+hm(d); else rel=hm(-d)+' ago';
 
   return (
