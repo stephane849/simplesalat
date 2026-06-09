@@ -63,6 +63,48 @@ jobs:
       - name: Add Capacitor Android platform
         run: npx cap add android
 
+      - name: Create SalatAudio native plugin
+        run: |
+          python3 - <<'EOF'
+          import base64
+          java_b64 = (
+              'cGFja2FnZSBjb20uc2ltcGxlc2FsYXQuYXBwOwppbXBvcnQgYW5kcm9pZC5jb250ZW50LnJlcy5B'
+              'c3NldEZpbGVEZXNjcmlwdG9yOwppbXBvcnQgYW5kcm9pZC5tZWRpYS5BdWRpb0F0dHJpYnV0ZXM7'
+              'CmltcG9ydCBhbmRyb2lkLm1lZGlhLk1lZGlhUGxheWVyOwppbXBvcnQgY29tLmdldGNhcGFjaXRv'
+              'ci5KU09iamVjdDsKaW1wb3J0IGNvbS5nZXRjYXBhY2l0b3IuUGx1Z2luOwppbXBvcnQgY29tLmdl'
+              'dGNhcGFjaXRvci5QbHVnaW5DYWxsOwppbXBvcnQgY29tLmdldGNhcGFjaXRvci5QbHVnaW5NZXRo'
+              'b2Q7CmltcG9ydCBjb20uZ2V0Y2FwYWNpdG9yLmFubm90YXRpb24uQ2FwYWNpdG9yUGx1Z2luOwoK'
+              'QENhcGFjaXRvclBsdWdpbihuYW1lID0gIlNhbGF0QXVkaW8iKQpwdWJsaWMgY2xhc3MgU2FsYXRB'
+              'dWRpb1BsdWdpbiBleHRlbmRzIFBsdWdpbiB7CiAgICBwcml2YXRlIE1lZGlhUGxheWVyIHBsYXll'
+              'cjsKCiAgICBAUGx1Z2luTWV0aG9kCiAgICBwdWJsaWMgdm9pZCBwbGF5KFBsdWdpbkNhbGwgY2Fs'
+              'bCkgewogICAgICAgIFN0cmluZyBzb3VuZCA9IGNhbGwuZ2V0U3RyaW5nKCJzb3VuZCIsICJtYWtr'
+              'YWgiKTsKICAgICAgICBzdG9wUGxheWVyKCk7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgQXNz'
+              'ZXRGaWxlRGVzY3JpcHRvciBhZmQgPSBnZXRDb250ZXh0KCkuZ2V0QXNzZXRzKCkKICAgICAgICAg'
+              'ICAgICAgIC5vcGVuRmQoInB1YmxpYy9hdWRpby9hZGhhbi0iICsgc291bmQgKyAiLm1wMyIpOwog'
+              'ICAgICAgICAgICBwbGF5ZXIgPSBuZXcgTWVkaWFQbGF5ZXIoKTsKICAgICAgICAgICAgcGxheWVy'
+              'LnNldEF1ZGlvQXR0cmlidXRlcyhuZXcgQXVkaW9BdHRyaWJ1dGVzLkJ1aWxkZXIoKQogICAgICAg'
+              'ICAgICAgICAgLnNldFVzYWdlKEF1ZGlvQXR0cmlidXRlcy5VU0FHRV9BTEFSTSkKICAgICAgICAg'
+              'ICAgICAgIC5zZXRDb250ZW50VHlwZShBdWRpb0F0dHJpYnV0ZXMuQ09OVEVOVF9UWVBFX01VU0lD'
+              'KQogICAgICAgICAgICAgICAgLmJ1aWxkKCkpOwogICAgICAgICAgICBwbGF5ZXIuc2V0RGF0YVNv'
+              'dXJjZShhZmQuZ2V0RmlsZURlc2NyaXB0b3IoKSwgYWZkLmdldFN0YXJ0T2Zmc2V0KCksIGFmZC5n'
+              'ZXRMZW5ndGgoKSk7CiAgICAgICAgICAgIHBsYXllci5wcmVwYXJlKCk7CiAgICAgICAgICAgIHBs'
+              'YXllci5zdGFydCgpOwogICAgICAgICAgICBwbGF5ZXIuc2V0T25Db21wbGV0aW9uTGlzdGVuZXIo'
+              'bXAgLT4gewogICAgICAgICAgICAgICAgc3RvcFBsYXllcigpOwogICAgICAgICAgICAgICAgbm90.'
+              'aWZ5TGlzdGVuZXJzKCJwbGF5YmFja0NvbXBsZXRlIiwgbmV3IEpTT2JqZWN0KCkpOwogICAgICAg'
+              'ICAgICB9KTsKICAgICAgICAgICAgY2FsbC5yZXNvbHZlKCk7CiAgICAgICAgfSBjYXRjaCAoRXhj'
+              'ZXB0aW9uIGUpIHsgY2FsbC5yZWplY3QoZS5nZXRNZXNzYWdlKCkpOyB9CiAgICB9CgogICAgQFBs'
+              'dWdpbk1ldGhvZAogICAgcHVibGljIHZvaWQgc3RvcChQbHVnaW5DYWxsIGNhbGwpIHsgc3RvcFBs'
+              'YXllcigpOyBjYWxsLnJlc29sdmUoKTsgfQoKICAgIHByaXZhdGUgdm9pZCBzdG9wUGxheWVyKCkg'
+              'ewogICAgICAgIGlmIChwbGF5ZXIgIT0gbnVsbCkgewogICAgICAgICAgICB0cnkgeyBwbGF5ZXIu'
+              'c3RvcCgpOyB9IGNhdGNoIChFeGNlcHRpb24gaWdub3JlZCkge30KICAgICAgICAgICAgcGxheWVy'
+              'LnJlbGVhc2UoKTsKICAgICAgICAgICAgcGxheWVyID0gbnVsbDsKICAgICAgICB9CiAgICB9Cn0K'
+          )
+          path = 'android/app/src/main/java/com/simplesalat/app/SalatAudioPlugin.java'
+          with open(path, 'w') as f:
+              f.write(base64.b64decode(java_b64).decode())
+          print('SalatAudioPlugin.java created')
+          EOF
+
       - name: Lock to portrait orientation
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
@@ -104,6 +146,7 @@ jobs:
               'public class MainActivity extends BridgeActivity {\n'
               '    @Override\n'
               '    protected void onCreate(android.os.Bundle savedInstanceState) {\n'
+              '        registerPlugin(SalatAudioPlugin.class);\n'
               '        super.onCreate(savedInstanceState);\n'
               '        WebSettings ws = this.bridge.getWebView().getSettings();\n'
               '        ws.setMediaPlaybackRequiresUserGesture(false);\n'
@@ -113,7 +156,7 @@ jobs:
           )
           with open(path, 'w') as f:
               f.write(content)
-          print('MainActivity patched: media playback unrestricted')
+          print('MainActivity patched: SalatAudio plugin registered + media playback unrestricted')
           EOF
 
       - name: Configure full-screen E-Ink display
