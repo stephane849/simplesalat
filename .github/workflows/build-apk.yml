@@ -262,6 +262,11 @@ jobs:
                   String sound = intent != null && intent.getStringExtra("sound") != null
                       ? intent.getStringExtra("sound") : "makkah";
                   float vol = intent != null ? intent.getFloatExtra("volume", 1.0f) : 1.0f;
+                  try {
+                      Intent launch = new Intent(this, MainActivity.class);
+                      launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                      startActivity(launch);
+                  } catch (Exception ignored) {}
                   play(sound, vol);
                   return START_NOT_STICKY;
               }
@@ -303,6 +308,7 @@ jobs:
           import android.os.Build;
           import com.getcapacitor.Plugin;
           import com.getcapacitor.PluginCall;
+          import com.getcapacitor.JSObject;
           import com.getcapacitor.PluginMethod;
           import com.getcapacitor.annotation.CapacitorPlugin;
 
@@ -331,6 +337,21 @@ jobs:
                   AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
                   am.cancel(makePi(id, "", 0f));
                   call.resolve();
+              }
+
+              @PluginMethod
+              public void stopAdhan(PluginCall call) {
+                  Intent i = new Intent(getContext(), AdhanService.class);
+                  i.setAction("STOP");
+                  getContext().stopService(i);
+                  call.resolve();
+              }
+
+              @PluginMethod
+              public void isAdhanPlaying(PluginCall call) {
+                  JSObject result = new JSObject();
+                  result.put("playing", AdhanService.isRunning);
+                  call.resolve(result);
               }
 
               private PendingIntent makePi(int id, String sound, float vol) {

@@ -62,6 +62,21 @@ function KompaktApp({ variant='a', chrome=true }){
       prefs.notif.fajr, prefs.notif.dhuhr, prefs.notif.asr,
       prefs.notif.maghrib, prefs.notif.isha]);
 
+  const [adhanPlaying, setAdhanPlaying] = React.useState(false);
+  React.useEffect(function(){
+    var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdhanScheduler;
+    if(!plugin || !plugin.isAdhanPlaying) return;
+    var id = setInterval(function(){
+      plugin.isAdhanPlaying().then(function(r){ setAdhanPlaying(!!r.playing); }).catch(function(){});
+    }, 1500);
+    return function(){ clearInterval(id); };
+  }, []);
+  const stopAdhan = function(){
+    var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdhanScheduler;
+    if(plugin && plugin.stopAdhan) plugin.stopAdhan({});
+    setAdhanPlaying(false);
+  };
+
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
@@ -88,6 +103,16 @@ function KompaktApp({ variant='a', chrome=true }){
     return (
       <div className="screen app-screen">
         <div className="viewport">{view}</div>
+        {adhanPlaying && (
+          <div style={{position:'fixed', bottom:0, left:0, right:0, padding:'12px 20px',
+            background:'var(--paper)', borderTop:'2px solid var(--ink)', zIndex:1000}}>
+            <button onClick={stopAdhan} style={{display:'block', width:'100%',
+              padding:'15px 0', fontSize:17, fontWeight:700, letterSpacing:'.04em',
+              background:'var(--ink)', color:'var(--paper)', border:'none', borderRadius:4, cursor:'pointer'}}>
+              Stop Adhan
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -97,6 +122,15 @@ function KompaktApp({ variant='a', chrome=true }){
     <KompaktFrame onBack={back} onHome={home} onMenu={menu}>
       <StatusBar nowStr={nowStr} />
       <div className="viewport">{view}</div>
+      {adhanPlaying && (
+        <div style={{padding:'12px 20px', background:'var(--paper)', borderTop:'2px solid var(--ink)'}}>
+          <button onClick={stopAdhan} style={{display:'block', width:'100%',
+            padding:'15px 0', fontSize:17, fontWeight:700, letterSpacing:'.04em',
+            background:'var(--ink)', color:'var(--paper)', border:'none', borderRadius:4, cursor:'pointer'}}>
+            Stop Adhan
+          </button>
+        </div>
+      )}
     </KompaktFrame>
   );
 }
