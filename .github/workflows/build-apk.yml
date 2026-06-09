@@ -523,7 +523,7 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: "Salāt — Build ${{ github.run_number }}"
           body: |
-            Debug APK built from commit `${{ github.sha }}`.
+            APK built from commit `${{ github.sha }}`.
 
             ## Install on Mudita Kompakt
             1. Download **salātapp.apk** below.
@@ -531,10 +531,11 @@ jobs:
             3. Install via the file manager — or with `adb install salātapp.apk`.
 
             ## Features
-            - **Arc of the Day** home — sun-path arc; tap any prayer name to see its time
+            - **Arc of the Day** — sun-path arc from Fajr to Isha; tap any prayer to see its time and countdown
+            - **Background alarms** — adhan plays at prayer time even when the phone is locked; screen wakes automatically
+            - **Three adhans** — Makkah, Madīnah, Sudan — with adjustable volume and in-app preview
             - **Hijri calendar** with ±2 day offset for local moon-sighting
-            - **Adhan** — bundled Makkah and Madinah MP3 recordings with in-app preview
-            - **Settings**: ISNA / MWL / Egyptian / Umm al-Qurā / Karachi / Moonsighting Committee
-            - Standard / Ḥanafī Asr · 12h / 24h clock
+            - **Six calculation methods**: ISNA / MWL / Egyptian / Umm al-Qurā / Karachi / Moonsighting Committee
+            - Standard / Ḥanafī Asr · 12h / 24h clock · GPS location
           files: android/app/build/outputs/apk/debug/salātapp.apk
           make_latest: true
