@@ -144,10 +144,11 @@ function ScreenNotifications({ prefs, setPrefs, go }){
     stopAll();
     var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SalatAudio;
     if(plugin){
-      plugin.play({sound: key}).then(function(){ setPlayingKey(key); }).catch(function(){ setPlayingKey(null); });
+      plugin.play({sound: key, volume: (prefs.adhanVolume != null ? prefs.adhanVolume : 80) / 100}).then(function(){ setPlayingKey(key); }).catch(function(){ setPlayingKey(null); });
       return;
     }
     var audio = new Audio(ADHAN_SRCS[key]);
+    audio.volume = (prefs.adhanVolume != null ? prefs.adhanVolume : 80) / 100;
     audioRef.current = audio;
     audio.onended = function(){ if(audioRef.current === audio) setPlayingKey(null); };
     audio.onerror = function(){ if(audioRef.current === audio) setPlayingKey(null); };
@@ -175,6 +176,19 @@ function ScreenNotifications({ prefs, setPrefs, go }){
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
           <div className="body"><div className="label">Adhan sound</div><div className="sub">Play call to prayer</div></div>
           <Toggle on={prefs.adhan} onChange={v=>setPrefs({adhan:v})} />
+        </div>
+
+        <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
+          <div className="body"><div className="label">Volume</div></div>
+          <span className="trail" style={{flex:'1 1 auto', padding:'0 8px'}}>
+            <input type="range" min="0" max="100"
+              value={prefs.adhanVolume != null ? prefs.adhanVolume : 80}
+              onChange={e => setPrefs({adhanVolume: parseInt(e.target.value)})}
+              style={{width:'100%'}} />
+          </span>
+          <span style={{minWidth:36, textAlign:'right', fontSize:15}}>
+            {prefs.adhanVolume != null ? prefs.adhanVolume : 80}%
+          </span>
         </div>
 
         <div style={{padding:'18px 32px 8px'}} className="kicker">Sound</div>

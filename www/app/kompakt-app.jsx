@@ -12,7 +12,7 @@ function KompaktApp({ variant='a', chrome=true }){
   const [stack,  setStack]    = React.useState([]);
   const [prefs,  setPrefsRaw] = React.useState({
     method:'isna', madhab:'standard', is24:false, hijriAdj:0,
-    adhan:true, sound:'makkah', reminder:'5 minutes before',
+    adhan:true, sound:'makkah', reminder:'5 minutes before', adhanVolume:80,
     notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
   });
   const setPrefs = (patch)=> setPrefsRaw(p=>({...p,...patch}));
@@ -55,10 +55,10 @@ function KompaktApp({ variant='a', chrome=true }){
       }
       var fireMs = midMs + (times[key] - off) * 60000;
       if(fireMs <= now) fireMs += 86400000;
-      plugin.schedule({id:i, triggerMs:fireMs, sound:prefs.sound||'makkah'}).catch(function(){});
+      plugin.schedule({id:i, triggerMs:fireMs, sound:prefs.sound||'makkah', volume:(prefs.adhanVolume||80)/100}).catch(function(){});
     });
   }, [times.fajr, times.dhuhr, times.asr, times.maghrib, times.isha,
-      prefs.adhan, prefs.sound, prefs.reminder,
+      prefs.adhan, prefs.sound, prefs.reminder, prefs.adhanVolume,
       prefs.notif.fajr, prefs.notif.dhuhr, prefs.notif.asr,
       prefs.notif.maghrib, prefs.notif.isha]);
 
