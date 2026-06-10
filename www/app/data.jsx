@@ -133,7 +133,7 @@ function dayOrder(times){ return PRAYERS.map(p=>({...p, t:times[p.key]})); }
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 
 // Current time in minutes from midnight, live
-function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes()+n.getSeconds()/60; }
+function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
 
 Object.assign(window, {
   PRAYERS, METHODS, computeTimes, LOC_DEFAULT,

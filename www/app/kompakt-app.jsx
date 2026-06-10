@@ -7,21 +7,44 @@
 
 const HOMES = { a:HomeLedger, b:HomeCountdown, c:HomeArc, d:HomeArcTimes };
 
+var PREFS_DEFAULTS = {
+  method:'isna', madhab:'standard', is24:false, hijriAdj:0,
+  adhan:true, sound:'makkah', reminder:'At adhan', adhanVolume:80,
+  notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
+};
+function loadPrefs() {
+  try {
+    var stored = JSON.parse(localStorage.getItem('salat_prefs') || 'null');
+    if (stored) return Object.assign({}, PREFS_DEFAULTS, stored, {
+      notif: Object.assign({}, PREFS_DEFAULTS.notif, stored.notif)
+    });
+  } catch(e) {}
+  return PREFS_DEFAULTS;
+}
+
 function KompaktApp({ variant='a', chrome=true }){
   const [screen, setScreen]   = React.useState('home');
   const [stack,  setStack]    = React.useState([]);
-  const [prefs,  setPrefsRaw] = React.useState({
-    method:'isna', madhab:'standard', is24:false, hijriAdj:0,
-    adhan:true, sound:'makkah', reminder:'5 minutes before', adhanVolume:80,
-    notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
-  });
-  const setPrefs = (patch)=> setPrefsRaw(p=>({...p,...patch}));
+  const [prefs,  setPrefsRaw] = React.useState(loadPrefs);
+  const setPrefs = function(patch){
+    setPrefsRaw(function(p){
+      var next = Object.assign({}, p, patch);
+      try { localStorage.setItem('salat_prefs', JSON.stringify(next)); } catch(e) {}
+      return next;
+    });
+  };
 
-  // Real current time, ticking every second
+  // Real current time, ticking once per minute aligned to the clock boundary
   const [nowMin, setNowMin] = React.useState(nowMinutes);
-  React.useEffect(()=>{
-    const id = setInterval(()=> setNowMin(nowMinutes()), 1000);
-    return ()=> clearInterval(id);
+  React.useEffect(function(){
+    var intervalId = null;
+    var now = new Date();
+    var msToNext = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    var timeoutId = setTimeout(function(){
+      setNowMin(nowMinutes());
+      intervalId = setInterval(function(){ setNowMin(nowMinutes()); }, 60000);
+    }, msToNext);
+    return function(){ clearTimeout(timeoutId); if(intervalId !== null) clearInterval(intervalId); };
   }, []);
 
   // GPS location — null while loading, then { lat, lon }
@@ -77,6 +100,14 @@ function KompaktApp({ variant='a', chrome=true }){
     setAdhanPlaying(false);
   };
 
+  // Hardware back button (Capacitor App plugin)
+  React.useEffect(function(){
+    var App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if(!App) return;
+    var handle = App.addListener('backButton', back);
+    return function(){ Promise.resolve(handle).then(function(h){ if(h && h.remove) h.remove(); }); };
+  }, []);
+
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
@@ -95,6 +126,8 @@ function KompaktApp({ variant='a', chrome=true }){
     case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locStatus={locStatus} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
+    case 'method-picker':   view = <ScreenMethodPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
+    case 'reminder-picker': view = <ScreenReminderPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} />;
   }
 

@@ -1,23 +1,50 @@
 /* ============================================================
    Salāt for Mudita Kompakt — Mudita Mindful Design (E Ink)
-   Pure grayscale. Warm paper. High contrast. No gradients.
+   Two-tone. High contrast. No gradients. No animations.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap');
+/* Lato (MMD canonical typeface) and Amiri bundled by CI */
+@font-face {
+  font-family: 'Lato';
+  src: url('fonts/lato-400.woff2') format('woff2');
+  font-weight: 100 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Lato';
+  src: url('fonts/lato-700.woff2') format('woff2');
+  font-weight: 600 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Amiri';
+  src: url('fonts/amiri-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Amiri';
+  src: url('fonts/amiri-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
 
 :root{
-  /* Warm 1-bit-ish palette (saturation kept near zero) */
-  --paper:      #FAF9F5;
-  --paper-2:    #F1EFE8;
-  --ink:        #17160F;
-  --ink-soft:   #45433A;
-  --ink-mute:   #8B887C;
-  --ink-faint:  #B4B1A6;
-  --line:       #DBD8CE;
-  --line-2:     #C7C3B7;
+  /* Two-tone E-Ink palette per Mudita MMD */
+  --paper:     #FAFAF8;
+  --paper-2:   #EBEBEA;
+  --ink:       #111110;
+  --ink-2:     #404040;
+  --line:      #AAAAAA;
 
-  --sans: 'Hanken Grotesk', system-ui, sans-serif;
-  --ar:   'Amiri', 'Hanken Grotesk', serif;
+  /* Legacy aliases — existing JSX works unchanged */
+  --ink-soft:  var(--ink-2);
+  --ink-mute:  var(--ink-2);
+  --ink-faint: var(--line);
+  --line-2:    var(--line);
+
+  --sans: 'Lato', system-ui, sans-serif;
+  --ar:   'Amiri', 'Lato', serif;
 
   --scr-w: 480px;
   --scr-h: 800px;
@@ -82,7 +109,7 @@ body{
    Kompakt device frame
    ============================================================ */
 .kompakt{
-  --finish:#ECEAE3;        /* white body */
+  --finish:#ECEAE3;
   position:relative;
   background:var(--finish);
   border-radius:46px;
@@ -92,7 +119,7 @@ body{
     0 30px 60px -28px rgba(0,0,0,.55),
     0 4px 14px -6px rgba(0,0,0,.3);
 }
-.kompakt::after{ /* subtle body edge */
+.kompakt::after{
   content:""; position:absolute; inset:3px; border-radius:43px;
   border:1px solid rgba(0,0,0,.10); pointer-events:none;
 }
@@ -109,7 +136,6 @@ body{
 .kompakt .earpiece .slit{ width:52px; height:5px; border-radius:3px; background:#2c2a22; }
 .kompakt .earpiece .dot{ width:6px; height:6px; border-radius:50%; background:#2c2a22; }
 
-/* capacitive nav strip */
 .kompakt .nav{
   position:absolute; left:0; right:0; bottom:30px;
   display:flex; align-items:center; justify-content:center; gap:74px;
@@ -122,14 +148,13 @@ body{
 .kompakt .nav button:active{ background:rgba(255,255,255,.10); }
 .kompakt .nav svg{ display:block; }
 
-/* privacy switch hint on left edge */
 .kompakt .priv{
   position:absolute; left:-4px; top:188px; width:6px; height:62px;
   background:#cdcabf; border-radius:3px 0 0 3px;
   box-shadow:0 1px 3px rgba(0,0,0,.3);
 }
 
-/* ---------- The 480x800 screen ---------- */
+/* ---------- The 480×800 screen ---------- */
 .screen{
   width:var(--scr-w); height:var(--scr-h);
   background:var(--paper); position:relative; overflow:hidden;
@@ -140,13 +165,13 @@ body{
 /* status bar */
 .statusbar{
   flex:0 0 auto; height:38px; display:flex; align-items:center; justify-content:space-between;
-  padding:0 26px; font-size:14px; color:var(--ink-soft); white-space:nowrap;
+  padding:0 26px; font-size:14px; color:var(--ink-2); white-space:nowrap;
 }
 .statusbar .right{ display:flex; align-items:center; gap:10px; }
 .batt{ display:inline-flex; align-items:center; gap:3px; }
-.batt .cell{ width:24px; height:12px; border:1.5px solid var(--ink-soft); border-radius:2px; position:relative; }
-.batt .cell::after{ content:""; position:absolute; right:-3.5px; top:3px; width:2px; height:6px; background:var(--ink-soft); border-radius:0 1px 1px 0; }
-.batt .fill{ position:absolute; left:1.5px; top:1.5px; bottom:1.5px; width:62%; background:var(--ink-soft); border-radius:1px; }
+.batt .cell{ width:24px; height:12px; border:2px solid var(--ink-2); border-radius:2px; position:relative; }
+.batt .cell::after{ content:""; position:absolute; right:-3.5px; top:3px; width:2px; height:6px; background:var(--ink-2); border-radius:0 1px 1px 0; }
+.batt .fill{ position:absolute; left:1.5px; top:1.5px; bottom:1.5px; width:62%; background:var(--ink-2); border-radius:1px; }
 
 .viewport{ flex:1 1 auto; position:relative; overflow:hidden; }
 .view{ position:absolute; inset:0; display:flex; flex-direction:column; }
@@ -155,9 +180,9 @@ body{
 .scr-pad{ padding:26px 32px; }
 
 .hrule{ height:1px; background:var(--line); border:0; margin:0; }
-.hrule.strong{ background:var(--line-2); }
+.hrule.strong{ background:var(--line); }
 
-.kicker{ font-size:12px; letter-spacing:.26em; text-transform:uppercase; font-weight:600; color:var(--ink-mute); }
+.kicker{ font-size:13px; letter-spacing:.26em; text-transform:uppercase; font-weight:600; color:var(--ink-2); }
 
 .ar{ font-family:var(--ar); }
 
@@ -168,7 +193,7 @@ body{
 }
 .appbar .title{ font-size:20px; font-weight:600; letter-spacing:-.01em; }
 .appbar .iconbtn{
-  appearance:none; border:0; background:transparent; padding:8px; margin:-8px; cursor:pointer; color:var(--ink);
+  appearance:none; border:0; background:transparent; padding:11px; margin:-11px; cursor:pointer; color:var(--ink);
   display:grid; place-items:center; border-radius:8px;
 }
 .appbar .iconbtn:active{ background:var(--paper-2); }
@@ -184,14 +209,14 @@ body{
 .row:active{ background:var(--paper-2); }
 .row .lead{ flex:0 0 auto; }
 .row .body{ flex:1 1 auto; min-width:0; }
-.row .label{ font-size:17px; font-weight:500; color:var(--ink); }
-.row .sub{ font-size:13.5px; color:var(--ink-mute); margin-top:2px; }
-.row .val{ font-size:15px; color:var(--ink-soft); }
-.row .trail{ flex:0 0 auto; display:flex; align-items:center; gap:10px; color:var(--ink-mute); }
+.row .label{ font-size:18px; font-weight:500; color:var(--ink); }
+.row .sub{ font-size:14px; color:var(--ink-2); margin-top:2px; }
+.row .val{ font-size:15px; color:var(--ink-2); }
+.row .trail{ flex:0 0 auto; display:flex; align-items:center; gap:10px; color:var(--ink-2); }
 
 /* toggle (1-bit) */
 .tgl{
-  width:50px; height:28px; border-radius:16px; border:1.5px solid var(--ink);
+  width:50px; height:28px; border-radius:16px; border:2px solid var(--ink);
   position:relative; flex:0 0 auto; background:var(--paper); transition:none;
 }
 .tgl .knob{ position:absolute; top:2.5px; left:2.5px; width:21px; height:21px; border-radius:50%; background:var(--ink); }
@@ -200,11 +225,11 @@ body{
 .tgl[data-on="false"]{ background:var(--paper); }
 .tgl[data-on="false"] .knob{ background:var(--ink); }
 
-/* segmented */
-.seg{ display:inline-flex; border:1.5px solid var(--ink); border-radius:4px; overflow:hidden; }
+/* segmented control */
+.seg{ display:inline-flex; border:2px solid var(--ink); border-radius:4px; overflow:hidden; }
 .seg button{ appearance:none; border:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
   font-size:13px; font-weight:600; padding:7px 14px; cursor:pointer; }
-.seg button + button{ border-left:1.5px solid var(--ink); }
+.seg button + button{ border-left:2px solid var(--ink); }
 .seg button[data-on="true"]{ background:var(--ink); color:var(--paper); }
 
 /* footer next steps */
@@ -218,7 +243,7 @@ body{
 /* primary action button (E Ink outlined) */
 .btn{
   appearance:none; font-family:var(--sans); font-size:16px; font-weight:600; color:var(--ink);
-  background:var(--paper); border:1.5px solid var(--ink); border-radius:7px;
+  background:var(--paper); border:2px solid var(--ink); border-radius:7px;
   padding:14px 22px; display:inline-flex; align-items:center; justify-content:center; gap:10px;
   cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
@@ -227,15 +252,15 @@ body{
 
 .nowbtn{
   appearance:none; font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:.04em;
-  color:var(--ink-soft); background:transparent; border:1px solid var(--line-2); border-radius:20px;
+  color:var(--ink-2); background:transparent; border:1px solid var(--line); border-radius:20px;
   padding:4px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
 }
 .nowbtn:active{ background:var(--paper-2); }
 .nowbtn .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink); }
 
-/* +/- stepper (settings) */
+/* +/- stepper — 44×44 touch target */
 .stepbtn{
-  appearance:none; width:32px; height:32px; border:1.5px solid var(--ink); background:var(--paper);
+  appearance:none; width:44px; height:44px; border:2px solid var(--ink); background:var(--paper);
   color:var(--ink); border-radius:6px; font-size:19px; line-height:1; font-weight:500; cursor:pointer;
   display:grid; place-items:center; font-family:var(--sans); padding:0;
 }
