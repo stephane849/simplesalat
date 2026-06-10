@@ -34,11 +34,17 @@ function KompaktApp({ variant='a', chrome=true }){
     });
   };
 
-  // Real current time, ticking every second
+  // Real current time, ticking once per minute aligned to the clock boundary
   const [nowMin, setNowMin] = React.useState(nowMinutes);
-  React.useEffect(()=>{
-    const id = setInterval(()=> setNowMin(nowMinutes()), 1000);
-    return ()=> clearInterval(id);
+  React.useEffect(function(){
+    var intervalId = null;
+    var now = new Date();
+    var msToNext = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    var timeoutId = setTimeout(function(){
+      setNowMin(nowMinutes());
+      intervalId = setInterval(function(){ setNowMin(nowMinutes()); }, 60000);
+    }, msToNext);
+    return function(){ clearTimeout(timeoutId); if(intervalId !== null) clearInterval(intervalId); };
   }, []);
 
   // GPS location — null while loading, then { lat, lon }
@@ -94,6 +100,14 @@ function KompaktApp({ variant='a', chrome=true }){
     setAdhanPlaying(false);
   };
 
+  // Hardware back button (Capacitor App plugin)
+  React.useEffect(function(){
+    var App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if(!App) return;
+    var handle = App.addListener('backButton', back);
+    return function(){ Promise.resolve(handle).then(function(h){ if(h && h.remove) h.remove(); }); };
+  }, []);
+
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
@@ -112,6 +126,8 @@ function KompaktApp({ variant='a', chrome=true }){
     case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locStatus={locStatus} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
+    case 'method-picker':   view = <ScreenMethodPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
+    case 'reminder-picker': view = <ScreenReminderPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} />;
   }
 

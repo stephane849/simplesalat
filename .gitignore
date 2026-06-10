@@ -9,6 +9,9 @@ www/app/*.js
 # Vendor scripts (downloaded during CI build)
 www/vendor/
 
+# Fonts (downloaded during CI build)
+www/fonts/
+
 # Build outputs
 *.apk
 

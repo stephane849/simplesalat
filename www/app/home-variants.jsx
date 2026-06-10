@@ -68,7 +68,7 @@ function HomeLedger({ times, nowMin, prefs, hijri, dateStr, go }){
               display:'flex', alignItems:'center', padding:'0 32px',
               height: p.prayer ? 66 : 52,
               borderBottom:'1px solid var(--line)',
-              opacity: past ? .42 : 1,
+              color: past && !active ? 'var(--ink-2)' : 'var(--ink)',
               background: active ? 'var(--paper-2)' : 'transparent',
             }}>
               <span style={{width:16, flex:'0 0 auto'}}>
@@ -131,8 +131,8 @@ function HomeCountdown({ times, nowMin, prefs, hijri, dateStr, go }){
           const active=p.key===nk, past=times[p.key]<nowMin && !active;
           return (
             <div key={p.key} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
-              padding:'0 32px', height:46, opacity:past?0.4:1, fontWeight:active?700:400}}>
-              <span style={{fontSize:15.5, letterSpacing:'.01em'}}>{p.en}</span>
+              padding:'0 32px', height:46, color:past&&!active?'var(--ink-2)':'var(--ink)', fontWeight:active?700:400}}>
+              <span style={{fontSize:16, letterSpacing:'.01em'}}>{p.en}</span>
               <Clock min={times[p.key]} is24={prefs.is24} size={15.5} weight={active?700:500}/>
             </div>
           );
@@ -163,23 +163,23 @@ function DayArc({ times, nowMin, size='full', focusKey=null, onSelect=null }){
     const anchor = x < padL+50 ? 'start' : x > W-padR-50 ? 'end' : 'middle';
     return { x, y, ly: top ? y-15 : y+21, anchor };
   };
-  const fontSize = compact ? 12 : 14;
-  const focSize  = compact ? 13 : 15;
+  const fontSize = compact ? 13 : 14;
+  const focSize  = compact ? 14 : 15;
   return (
     <svg viewBox={`0 0 ${W} ${vbH}`} width="100%" style={{display:'block', overflow:'visible'}}>
       <line x1={padL-4} y1={horY} x2={W-padR+4} y2={horY} stroke="var(--line-2)" strokeWidth="1" strokeDasharray="2 4"/>
-      <path d={path(times.fajr, times.isha)} fill="none" stroke="var(--ink-faint)" strokeWidth="1.5" strokeDasharray="2 5"/>
+      <path d={path(times.fajr, times.isha)} fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeDasharray="2 5"/>
       <path d={path(times.fajr, fnow)} fill="none" stroke="var(--ink)" strokeWidth="2.5"/>
       {PRAYERS.map(p=>{
         const x=fx(times[p.key]), y=fy(times[p.key]); const past = times[p.key] < nowMin;
         return <circle key={p.key} cx={x} cy={y} r={p.prayer?4.5:3}
-          fill={past?'var(--ink)':'var(--paper)'} stroke="var(--ink)" strokeWidth="1.75"/>;
+          fill={past?'var(--ink)':'var(--paper)'} stroke="var(--ink)" strokeWidth="2"/>;
       })}
       <g>
         <circle cx={fx(fnow)} cy={fy(fnow)} r="8" fill="var(--ink)"/>
         {[0,45,90,135,180,225,270,315].map(a=>{ const r=a*Math.PI/180, x=fx(fnow), y=fy(fnow);
           return <line key={a} x1={x+Math.cos(r)*11} y1={y+Math.sin(r)*11}
-            x2={x+Math.cos(r)*15} y2={y+Math.sin(r)*15} stroke="var(--ink)" strokeWidth="1.75" strokeLinecap="round"/>; })}
+            x2={x+Math.cos(r)*15} y2={y+Math.sin(r)*15} stroke="var(--ink)" strokeWidth="2" strokeLinecap="round"/>; })}
       </g>
       {PRAYERS.map(p=>{ const L=labelFor(p); const foc = p.key===focusKey;
         const clickable = p.prayer && !!onSelect;
@@ -237,7 +237,7 @@ function HomeArc({ times, nowMin, prefs, hijri, dateStr, go }){
           <Clock min={selMin} is24={prefs.is24} size={17} weight={600}/>
           <span style={{color:'var(--ink-mute)'}}>· {rel}</span>
         </div>
-        <div style={{marginTop:18, fontSize:12.5, color:'var(--ink-mute)', letterSpacing:'.01em'}}>
+        <div style={{marginTop:18, fontSize:14, color:'var(--ink-mute)', letterSpacing:'.01em'}}>
           Tap a prayer name on the arc to see its time.
         </div>
       </div>
@@ -274,7 +274,7 @@ function HomeArcTimes({ times, nowMin, prefs, hijri, dateStr, go }){
             <div key={p.key} style={{
               display:'flex', alignItems:'center', padding:'0 32px',
               height: p.prayer ? 56 : 46, borderBottom:'1px solid var(--line)',
-              opacity: past ? .42 : 1, background: active ? 'var(--paper-2)' : 'transparent',
+              color: past && !active ? 'var(--ink-2)' : 'var(--ink)', background: active ? 'var(--paper-2)' : 'transparent',
             }}>
               <span style={{width:16, flex:'0 0 auto'}}>
                 {active && <span style={{display:'inline-block', width:8, height:8, background:'var(--ink)'}} />}

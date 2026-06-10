@@ -33,11 +33,9 @@ function ScreenMenu({ go }){
 
 /* ---------- Settings ---------- */
 function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
-  const mKeys = Object.keys(METHODS);
   const m = METHODS[prefs.method];
-  const cycleMethod = ()=>{ const i=mKeys.indexOf(prefs.method); setPrefs({method:mKeys[(i+1)%mKeys.length]}); };
   const a = prefs.hijriAdj || 0;
-  const adjLabel = a===0 ? '0 days' : `${a>0?'+':'\u2212'}${Math.abs(a)} day${Math.abs(a)>1?'s':''}`;
+  const adjLabel = a===0 ? '0 days' : `${a>0?'+':'−'}${Math.abs(a)} day${Math.abs(a)>1?'s':''}`;
   return (
     <div className="view">
       <AppBar title="Settings" onBack={()=>go('home')} onMenu={()=>go('menu')} />
@@ -50,8 +48,8 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
           </span></span>
         </div>
 
-        <div className="row" onClick={cycleMethod} style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">Calculation method</div><div className="sub">{m.region} · tap to change</div></div>
+        <div className="row" onClick={()=>go('method-picker')} style={{borderBottom:'1px solid var(--line)'}}>
+          <div className="body"><div className="label">Calculation method</div><div className="sub">{m.region}</div></div>
           <span className="trail"><span className="val" style={{textAlign:'right', maxWidth:158, lineHeight:1.2}}>{m.label}</span><Ico.chev/></span>
         </div>
 
@@ -111,13 +109,11 @@ const ADHAN_SRCS = {
 };
 
 function ScreenNotifications({ prefs, setPrefs, go }){
-  const reminders = ['At adhan','5 minutes before','10 minutes before','15 minutes before'];
   const sounds = [
     {k:'makkah',  label:'Makkah'},
     {k:'madinah', label:'Madīnah'},
     {k:'sudan',   label:'Sudan'},
   ];
-  const cyc = (key, arr)=>{ const i=arr.indexOf(prefs[key]); setPrefs({[key]:arr[(i+1)%arr.length]}); };
   const list = PRAYERS.filter(p=>p.prayer);
   const setNotif = (k,v)=> setPrefs({ notif:{...prefs.notif, [k]:v} });
 
@@ -160,13 +156,8 @@ function ScreenNotifications({ prefs, setPrefs, go }){
     }
   };
 
-  const Radio = ({on})=>(
-    <span style={{width:22, height:22, borderRadius:'50%', border:'1.5px solid var(--ink)',
-      flex:'0 0 auto', display:'grid', placeItems:'center'}}>
-      {on && <span style={{width:11, height:11, borderRadius:'50%', background:'var(--ink)'}} />}
-    </span>
-  );
-  const dim = prefs.adhan ? {} : { opacity:0.38, pointerEvents:'none' };
+  const vol = prefs.adhanVolume != null ? prefs.adhanVolume : 80;
+  const dim = prefs.adhan ? {} : { pointerEvents:'none' };
 
   return (
     <div className="view">
@@ -180,14 +171,12 @@ function ScreenNotifications({ prefs, setPrefs, go }){
 
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
           <div className="body"><div className="label">Volume</div></div>
-          <span className="trail" style={{flex:'1 1 auto', padding:'0 8px'}}>
-            <input type="range" min="0" max="100"
-              value={prefs.adhanVolume != null ? prefs.adhanVolume : 80}
-              onChange={e => setPrefs({adhanVolume: parseInt(e.target.value)})}
-              style={{width:'100%'}} />
-          </span>
-          <span style={{minWidth:36, textAlign:'right', fontSize:15}}>
-            {prefs.adhanVolume != null ? prefs.adhanVolume : 80}%
+          <span className="trail" style={{gap:10}}>
+            <button className="stepbtn" disabled={vol <= 0}
+              onClick={()=>setPrefs({adhanVolume:Math.max(0, vol-10)})} aria-label="Decrease volume">−</button>
+            <span className="val" style={{minWidth:44, textAlign:'center'}}>{vol}%</span>
+            <button className="stepbtn" disabled={vol >= 100}
+              onClick={()=>setPrefs({adhanVolume:Math.min(100, vol+10)})} aria-label="Increase volume">+</button>
           </span>
         </div>
 
@@ -198,7 +187,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
               <span className="lead"><Radio on={prefs.sound===s.k} /></span>
               <div className="body"><div className="label">{s.label}</div></div>
               <span className="trail">
-                <button className="appbar iconbtn" style={{padding:8, border:'1.5px solid var(--ink)', borderRadius:'50%'}}
+                <button className="appbar iconbtn" style={{padding:13, border:'2px solid var(--ink)', borderRadius:'50%'}}
                   onClick={(e)=>previewSound(e, s.k)} aria-label="Preview">
                   {playingKey===s.k ? <Ico.pause/> : <Ico.play/>}
                 </button>
@@ -208,7 +197,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
         </div>
 
         <div style={{padding:'18px 32px 8px'}} className="kicker">Timing</div>
-        <div className="row" onClick={()=>cyc('reminder', reminders)} style={{borderBottom:'1px solid var(--line)'}}>
+        <div className="row" onClick={()=>go('reminder-picker')} style={{borderBottom:'1px solid var(--line)'}}>
           <div className="body"><div className="label">Reminder</div></div>
           <span className="trail"><span className="val">{prefs.reminder}</span><Ico.chev/></span>
         </div>
@@ -227,6 +216,53 @@ function ScreenNotifications({ prefs, setPrefs, go }){
           <div className="body"><div className="label" style={{color:'var(--ink-soft)'}}>Sunrise</div><div className="sub">Shurūq reminder</div></div>
           <Toggle on={prefs.notif.sunrise} onChange={v=>setNotif('sunrise', v)} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Calculation Method Picker ---------- */
+function ScreenMethodPicker({ prefs, setPrefs, go }){
+  return (
+    <div className="view">
+      <AppBar title="Calculation Method" onBack={()=>go('settings')} />
+      <hr className="hrule" />
+      <div className="scroll">
+        {Object.keys(METHODS).map(function(key){
+          var m = METHODS[key];
+          return (
+            <div key={key} className="row" onClick={function(){ setPrefs({method:key}); go('settings'); }}
+              style={{borderBottom:'1px solid var(--line)'}}>
+              <span className="lead"><Radio on={prefs.method===key} /></span>
+              <div className="body">
+                <div className="label">{m.label}</div>
+                <div className="sub">{m.region}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Reminder Timing Picker ---------- */
+function ScreenReminderPicker({ prefs, setPrefs, go }){
+  var reminders = ['At adhan','5 minutes before','10 minutes before','15 minutes before'];
+  return (
+    <div className="view">
+      <AppBar title="Reminder" onBack={()=>go('notifications')} />
+      <hr className="hrule" />
+      <div className="scroll">
+        {reminders.map(function(r){
+          return (
+            <div key={r} className="row" onClick={function(){ setPrefs({reminder:r}); go('notifications'); }}
+              style={{borderBottom:'1px solid var(--line)'}}>
+              <span className="lead"><Radio on={prefs.reminder===r} /></span>
+              <div className="body"><div className="label">{r}</div></div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -262,7 +298,7 @@ function ScreenCalendar({ go, hijriAdj=0 }){
       </div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', padding:'0 20px 6px'}}>
         {WEEKDAYS_S.map((w,i)=>(
-          <div key={i} style={{textAlign:'center', fontSize:11, letterSpacing:'.08em', fontWeight:600,
+          <div key={i} style={{textAlign:'center', fontSize:13, letterSpacing:'.08em', fontWeight:600,
             color: i===5?'var(--ink-soft)':'var(--ink-mute)', padding:'4px 0'}}>{w}</div>
         ))}
       </div>
@@ -282,7 +318,7 @@ function ScreenCalendar({ go, hijriAdj=0 }){
                 color: today?'var(--paper)':(fri?'var(--ink)':'var(--ink-soft)'),
               }}>
                 <span className="tnum" style={{fontSize:16, fontWeight: today?700:500, lineHeight:1}}>{hj.d}</span>
-                <span className="tnum" style={{fontSize:9.5, opacity:.7, marginTop:1}}>{d}</span>
+                <span className="tnum" style={{fontSize:11, opacity:.7, marginTop:1}}>{d}</span>
               </div>
             </div>
           );
@@ -300,4 +336,5 @@ function ScreenCalendar({ go, hijriAdj=0 }){
   );
 }
 
-Object.assign(window, { ScreenMenu, ScreenSettings, ScreenNotifications, ScreenCalendar });
+Object.assign(window, { ScreenMenu, ScreenSettings, ScreenNotifications, ScreenCalendar,
+  ScreenMethodPicker, ScreenReminderPicker });

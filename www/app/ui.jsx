@@ -60,6 +60,16 @@ function AppBar({ title, onMenu, onBack }){
   );
 }
 
+/* ---- radio button ---- */
+function Radio({ on }){
+  return (
+    <span style={{width:22, height:22, borderRadius:'50%', border:'2px solid var(--ink)',
+      flex:'0 0 auto', display:'grid', placeItems:'center'}}>
+      {on && <span style={{width:11, height:11, borderRadius:'50%', background:'var(--ink)'}} />}
+    </span>
+  );
+}
+
 /* ---- toggle ---- */
 function Toggle({ on, onChange }){
   return (
@@ -82,4 +92,4 @@ function Clock({ min, is24, size=20, weight=500, mute=false }){
   );
 }
 
-Object.assign(window, { Ico, StatusBar, AppBar, Toggle, Clock });
+Object.assign(window, { Ico, StatusBar, AppBar, Toggle, Clock, Radio });

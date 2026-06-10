@@ -46,6 +46,16 @@ jobs:
           curl -fsSL -o www/vendor/react-dom.min.js \
             https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js
 
+      - name: Download fonts
+        run: |
+          mkdir -p www/fonts
+          LATO="https://cdn.jsdelivr.net/npm/@fontsource/lato/files"
+          AMIRI="https://cdn.jsdelivr.net/npm/@fontsource/amiri/files"
+          curl -fsSL -o www/fonts/lato-400.woff2  "${LATO}/lato-latin-400-normal.woff2"
+          curl -fsSL -o www/fonts/lato-700.woff2  "${LATO}/lato-latin-700-normal.woff2"
+          curl -fsSL -o www/fonts/amiri-400.woff2 "${AMIRI}/amiri-arabic-400-normal.woff2"
+          curl -fsSL -o www/fonts/amiri-700.woff2 "${AMIRI}/amiri-arabic-700-normal.woff2"
+
       # ── Android platform ─────────────────────────────────────────────────
       - name: Cache Gradle
         uses: actions/cache@v4
