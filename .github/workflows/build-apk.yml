@@ -178,6 +178,23 @@ jobs:
               '        super.onCreate(savedInstanceState);\n'
               '        WebSettings ws = this.bridge.getWebView().getSettings();\n'
               '        ws.setMediaPlaybackRequiresUserGesture(false);\n'
+              '        requestLocationPermission();\n'
+              '    }\n'
+              '\n'
+              '    /* The WebView geolocation API only returns a fix once the Android runtime\n'
+              '       permission is granted — no Capacitor Geolocation plugin is installed, so\n'
+              '       ask for it here on first launch. */\n'
+              '    private void requestLocationPermission() {\n'
+              '        String fine = android.Manifest.permission.ACCESS_FINE_LOCATION;\n'
+              '        String coarse = android.Manifest.permission.ACCESS_COARSE_LOCATION;\n'
+              '        boolean granted = androidx.core.content.ContextCompat.checkSelfPermission(this, fine)\n'
+              '                == android.content.pm.PackageManager.PERMISSION_GRANTED\n'
+              '            || androidx.core.content.ContextCompat.checkSelfPermission(this, coarse)\n'
+              '                == android.content.pm.PackageManager.PERMISSION_GRANTED;\n'
+              '        if (!granted) {\n'
+              '            androidx.core.app.ActivityCompat.requestPermissions(\n'
+              '                this, new String[]{ fine, coarse }, 8401);\n'
+              '        }\n'
               '    }\n'
               '\n'
               '    @Override\n'
@@ -594,6 +611,7 @@ jobs:
             - **Three adhans** — Makkah, Madīnah, Sudan — with adjustable volume and in-app preview
             - **Hijri calendar** with ±2 day offset for local moon-sighting
             - **Six calculation methods**: ISNA / MWL / Egyptian / Umm al-Qurā / Karachi / Moonsighting Committee
-            - Standard / Ḥanafī Asr · 12h / 24h clock · GPS location
+            - **Location** — GPS with one-tap retry, or set it by hand from the bundled city list or exact coordinates
+            - Standard / Ḥanafī Asr · 12h / 24h clock
           files: android/app/build/outputs/apk/debug/salātapp.apk
           make_latest: true

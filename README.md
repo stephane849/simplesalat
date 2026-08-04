@@ -20,7 +20,9 @@ Designed for E-Ink — high-contrast, no animations, no unnecessary UI.
 
 **Standard and Ḥanafī Asr** — select your school's shadow-length method.
 
-**12h / 24h time display.** GPS location with manual fallback.
+**Location** — GPS with one-tap retry, or set it by hand from the bundled city list or exact coordinates. The choice is saved, and the last GPS fix is remembered between launches.
+
+**12h / 24h time display.**
 
 ---
 

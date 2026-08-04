@@ -10,6 +10,7 @@ const HOMES = { a:HomeLedger, b:HomeCountdown, c:HomeArc, d:HomeArcTimes };
 var PREFS_DEFAULTS = {
   method:'isna', madhab:'standard', is24:false, hijriAdj:0,
   adhan:true, sound:'makkah', reminder:'At adhan', adhanVolume:80,
+  locMode:'auto', manualLoc:null,
   notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
 };
 function loadPrefs() {
@@ -20,6 +21,18 @@ function loadPrefs() {
     });
   } catch(e) {}
   return PREFS_DEFAULTS;
+}
+
+/* Last GPS fix, kept so prayer times are right at launch before (or without) a new fix */
+function loadGpsFix() {
+  try {
+    var fix = JSON.parse(localStorage.getItem('salat_gps') || 'null');
+    if (fix && isFinite(fix.lat) && isFinite(fix.lon)) return fix;
+  } catch(e) {}
+  return null;
+}
+function saveGpsFix(fix) {
+  try { localStorage.setItem('salat_gps', JSON.stringify(fix)); } catch(e) {}
 }
 
 function KompaktApp({ variant='a', chrome=true }){
@@ -47,17 +60,33 @@ function KompaktApp({ variant='a', chrome=true }){
     return function(){ clearTimeout(timeoutId); if(intervalId !== null) clearInterval(intervalId); };
   }, []);
 
-  // GPS location — null while loading, then { lat, lon }
-  const [loc,       setLoc]     = React.useState(null);
-  const [locStatus, setLocStat] = React.useState('loading');
-  React.useEffect(()=>{
-    if(!navigator.geolocation){ setLocStat('denied'); return; }
+  // GPS fix — cached from the last run, refreshed on mount and on demand
+  const [gps,       setGps]     = React.useState(loadGpsFix);
+  const [gpsStatus, setGpsStat] = React.useState('loading');
+  const [gpsNonce,  setGpsNonce]= React.useState(0);
+  const retryGps = function(){ setGpsNonce(function(n){ return n+1; }); };
+  React.useEffect(function(){
+    if(prefs.locMode === 'manual') return;          // location set by hand — don't ask GPS
+    if(!navigator.geolocation){ setGpsStat('unavailable'); return; }
+    var cancelled = false;
+    setGpsStat('loading');
     navigator.geolocation.getCurrentPosition(
-      pos=>{ setLoc({lat:pos.coords.latitude, lon:pos.coords.longitude}); setLocStat('ok'); },
-      ()=>  setLocStat('denied'),
-      { enableHighAccuracy:false, timeout:10000, maximumAge:3600000 }
+      function(pos){
+        if(cancelled) return;
+        var fix = { lat:pos.coords.latitude, lon:pos.coords.longitude };
+        setGps(fix); saveGpsFix(fix); setGpsStat('ok');
+      },
+      function(){ if(!cancelled) setGpsStat('denied'); },
+      { enableHighAccuracy:false, timeout:10000, maximumAge:600000 }
     );
-  }, []);
+    return function(){ cancelled = true; };
+  }, [prefs.locMode, gpsNonce]);
+
+  // Effective location: manual choice wins, then GPS, then the bundled default
+  const manualLoc = prefs.locMode === 'manual' ? prefs.manualLoc : null;
+  const loc       = manualLoc || gps || null;
+  const locSource = manualLoc ? 'manual' : (gps ? 'gps' : 'default');
+  const place     = locName(loc);
 
   const lat   = loc ? loc.lat : null;
   const lon   = loc ? loc.lon : null;
@@ -123,12 +152,13 @@ function KompaktApp({ variant='a', chrome=true }){
   let view;
   switch(screen){
     case 'menu':          view = <ScreenMenu go={go} />; break;
-    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locStatus={locStatus} />; break;
+    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locSource={locSource} gpsStatus={gpsStatus} />; break;
+    case 'location':      view = <ScreenLocation prefs={prefs} setPrefs={setPrefs} go={go} gps={gps} gpsStatus={gpsStatus} retryGps={retryGps} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
     case 'method-picker':   view = <ScreenMethodPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'reminder-picker': view = <ScreenReminderPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
-    default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} />;
+    default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} place={place} />;
   }
 
   // APK mode: no bezel, no status bar — app fills 100vw × 100vh directly

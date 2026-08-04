@@ -32,20 +32,25 @@ function ScreenMenu({ go }){
 }
 
 /* ---------- Settings ---------- */
-function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
+function ScreenSettings({ prefs, setPrefs, go, loc, locSource, gpsStatus }){
   const m = METHODS[prefs.method];
   const a = prefs.hijriAdj || 0;
   const adjLabel = a===0 ? '0 days' : `${a>0?'+':'−'}${Math.abs(a)} day${Math.abs(a)>1?'s':''}`;
+  const locSub = locSource==='manual' ? 'Set manually'
+               : locSource==='gps'    ? 'GPS'
+               : gpsStatus==='loading'? 'Locating…'
+               : 'GPS unavailable · default';
+  const locVal = locSource==='default' && gpsStatus==='loading' ? 'Locating…' : locName(loc);
   return (
     <div className="view">
       <AppBar title="Settings" onBack={()=>go('home')} onMenu={()=>go('menu')} />
       <hr className="hrule" />
       <div className="scroll">
-        <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">Location</div><div className="sub">{locStatus==='ok'?'GPS':'Auto · GPS'}</div></div>
-          <span className="trail"><span className="val" style={{maxWidth:146, textAlign:'right', lineHeight:1.3}}>
-            {locStatus==='ok'&&loc ? `${Math.abs(loc.lat).toFixed(2)}°${loc.lat>=0?'N':'S'}, ${Math.abs(loc.lon).toFixed(2)}°${loc.lon>=0?'E':'W'}` : locStatus==='loading' ? 'Locating…' : LOC_DEFAULT.city+' (default)'}
-          </span></span>
+        <div className="row" onClick={()=>go('location')} style={{borderBottom:'1px solid var(--line)'}}>
+          <div className="body"><div className="label">Location</div><div className="sub">{locSub}</div></div>
+          <span className="trail"><span className="val" style={{maxWidth:140, textAlign:'right', lineHeight:1.3}}>
+            {locVal}
+          </span><Ico.chev/></span>
         </div>
 
         <div className="row" onClick={()=>go('method-picker')} style={{borderBottom:'1px solid var(--line)'}}>
@@ -83,7 +88,7 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
         </div>
 
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">High-latitude rule</div><div className="sub">Ottawa, summer</div></div>
+          <div className="body"><div className="label">High-latitude rule</div><div className="sub">Short summer nights</div></div>
           <span className="trail"><span className="val">Angle-based</span></span>
         </div>
 
@@ -95,6 +100,108 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
           <div className="body"><div className="label">About Salāt</div><div className="sub">For MuditaOS K</div></div>
           <span className="trail"><span className="val">v1.0</span></span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Location — GPS, bundled city list, or typed coordinates ---------- */
+function ScreenLocation({ prefs, setPrefs, go, gps, gpsStatus, retryGps }){
+  const manual = prefs.locMode === 'manual' ? (prefs.manualLoc || null) : null;
+  const [query, setQuery] = React.useState('');
+  const [latIn, setLatIn] = React.useState(manual ? String(manual.lat) : '');
+  const [lonIn, setLonIn] = React.useState(manual ? String(manual.lon) : '');
+  const [err,   setErr]   = React.useState('');
+
+  const useGps = ()=>{ setPrefs({ locMode:'auto' }); retryGps(); };
+
+  const pickCity = (c)=>{
+    setPrefs({ locMode:'manual', manualLoc:{ lat:c.lat, lon:c.lon, city:c.city } });
+    go('settings');
+  };
+
+  const saveCoords = ()=>{
+    const parsed = parseCoords(latIn, lonIn);
+    if(!parsed){ setErr('Latitude −90…90, longitude −180…180'); return; }
+    setErr('');
+    setPrefs({ locMode:'manual', manualLoc:{ lat:parsed.lat, lon:parsed.lon, city:null } });
+    go('settings');
+  };
+
+  const q = query.trim().toLowerCase();
+  const gpsSub = gpsStatus==='ok' && gps ? coordStr(gps.lat, gps.lon)
+               : gpsStatus==='loading'   ? 'Locating…'
+               : gpsStatus==='unavailable' ? 'No GPS on this device'
+               : 'No fix — tap to try again';
+
+  return (
+    <div className="view">
+      <AppBar title="Location" onBack={()=>go('settings')} onMenu={()=>go('menu')} />
+      <hr className="hrule" />
+      <div className="scroll">
+        <div className="row" onClick={useGps} style={{borderBottom:'1px solid var(--line)'}}>
+          <span className="lead"><Radio on={prefs.locMode!=='manual'} /></span>
+          <div className="body">
+            <div className="label">Automatic (GPS)</div>
+            <div className="sub">{gpsSub}</div>
+          </div>
+        </div>
+
+        <div style={{padding:'18px 32px 8px'}} className="kicker">City</div>
+        <div style={{padding:'0 32px 6px'}}>
+          <input className="tinput" type="text" value={query} placeholder="Search cities"
+            onChange={(e)=>setQuery(e.target.value)} aria-label="Search cities" />
+        </div>
+        {CITY_REGIONS.map(function(grp){
+          var hits = grp.cities.filter(function(c){ return !q || c.city.toLowerCase().indexOf(q) >= 0; });
+          if(!hits.length) return null;
+          return (
+            <div key={grp.region}>
+              <div style={{padding:'14px 32px 6px', fontSize:13, color:'var(--ink-mute)',
+                letterSpacing:'.04em'}}>{grp.region}</div>
+              {hits.map(function(c){
+                var on = !!manual && manual.city === c.city;
+                return (
+                  <div key={c.city} className="row" onClick={function(){ pickCity(c); }}
+                    style={{borderBottom:'1px solid var(--line)'}}>
+                    <span className="lead"><Radio on={on} /></span>
+                    <div className="body"><div className="label">{c.city}</div></div>
+                    <span className="trail"><span className="val">{coordStr(c.lat, c.lon)}</span></span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+        {q && !CITY_REGIONS.some(function(g){
+          return g.cities.some(function(c){ return c.city.toLowerCase().indexOf(q) >= 0; }); }) && (
+          <div style={{padding:'10px 32px 4px', fontSize:14, color:'var(--ink-mute)'}}>
+            No match — enter coordinates below.
+          </div>
+        )}
+
+        <div style={{padding:'22px 32px 8px'}} className="kicker">Coordinates</div>
+        <div style={{padding:'0 32px 8px', display:'flex', gap:12}}>
+          <label style={{flex:1, minWidth:0}}>
+            <div style={{fontSize:13, color:'var(--ink-mute)', marginBottom:5}}>Latitude</div>
+            <input className="tinput" type="text" inputMode="text" value={latIn} placeholder="45.42"
+              onChange={(e)=>{ setLatIn(e.target.value); setErr(''); }} aria-label="Latitude" />
+          </label>
+          <label style={{flex:1, minWidth:0}}>
+            <div style={{fontSize:13, color:'var(--ink-mute)', marginBottom:5}}>Longitude</div>
+            <input className="tinput" type="text" inputMode="text" value={lonIn} placeholder="-75.70"
+              onChange={(e)=>{ setLonIn(e.target.value); setErr(''); }} aria-label="Longitude" />
+          </label>
+        </div>
+        {err && <div style={{padding:'0 32px 8px', fontSize:13.5, color:'var(--ink)'}}>{err}</div>}
+        <div style={{padding:'6px 32px 26px'}}>
+          <button className="btn" style={{width:'100%'}} onClick={saveCoords}>Use these coordinates</button>
+        </div>
+
+        <div style={{padding:'0 32px 30px', fontSize:13, color:'var(--ink-mute)', lineHeight:1.5}}>
+          Prayer times use the phone&rsquo;s time zone. When travelling, set the phone clock to the
+          local time zone as well.
         </div>
       </div>
     </div>
@@ -337,4 +444,4 @@ function ScreenCalendar({ go, hijriAdj=0 }){
 }
 
 Object.assign(window, { ScreenMenu, ScreenSettings, ScreenNotifications, ScreenCalendar,
-  ScreenMethodPicker, ScreenReminderPicker });
+  ScreenMethodPicker, ScreenReminderPicker, ScreenLocation });

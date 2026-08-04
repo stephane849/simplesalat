@@ -258,6 +258,15 @@ body{
 .nowbtn:active{ background:var(--paper-2); }
 .nowbtn .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink); }
 
+/* text field (search, coordinates) — high-contrast, no focus glow on E Ink */
+.tinput{
+  appearance:none; width:100%; box-sizing:border-box; font-family:var(--sans);
+  font-size:16px; color:var(--ink); background:var(--paper);
+  border:2px solid var(--ink); border-radius:6px; padding:11px 12px;
+}
+.tinput::placeholder{ color:var(--ink-2); }
+.tinput:focus{ outline:none; background:var(--paper-2); }
+
 /* +/- stepper — 44×44 touch target */
 .stepbtn{
   appearance:none; width:44px; height:44px; border:2px solid var(--ink); background:var(--paper);
