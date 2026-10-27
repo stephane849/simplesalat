@@ -53,7 +53,7 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locLabel, locSource, gpsStat
         <div className="row" onClick={()=>go('location-picker')} style={{borderBottom:'1px solid var(--line)'}}>
           <div className="body"><div className="label">Location</div><div className="sub">{locSubLabel(locSource, gpsStatus)}</div></div>
           <span className="trail"><span className="val" style={{maxWidth:146, textAlign:'right', lineHeight:1.3}}>
-            {locSource==='default' ? locLabel+' (default)' : locLabel}
+            {locLabel}
           </span><Ico.chev/></span>
         </div>
 
@@ -395,5 +395,26 @@ function ScreenLocationPicker({ prefs, setPrefs, go, loc, locLabel, locSource, g
   );
 }
 
+/* ---------- Waiting for location (no fix yet, no city chosen) ---------- */
+function ScreenNeedLocation({ gpsStatus, retryGps, go, hijri, dateStr }){
+  const loading = gpsStatus==='loading';
+  const msg = loading
+    ? 'Finding your location. A first GPS fix can take a minute or two — standing near a window or outdoors helps.'
+    : gpsStatus==='denied'
+      ? 'Location permission is off. Allow location for Salāt in Android settings, or choose your city.'
+      : 'Could not get a GPS fix. Try again near a window or outdoors, or choose your city.';
+  return (
+    <div className="view">
+      <HomeHeader hijri={hijri} dateStr={dateStr} compact locLabel={loading ? 'Locating…' : 'No location'} />
+      <div style={{flex:'1 1 auto', display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 36px', gap:22}}>
+        <div style={{fontSize:22, fontWeight:600, textAlign:'center'}}>{loading ? 'Locating…' : 'Location needed'}</div>
+        <div style={{fontSize:16, lineHeight:1.45, color:'var(--ink-2)', textAlign:'center'}}>{msg}</div>
+        {!loading && <button className="btn" onClick={retryGps}>Try GPS again</button>}
+        <button className="btn" onClick={()=>go('location-picker')}>Choose a city</button>
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, { ScreenMenu, ScreenSettings, ScreenNotifications, ScreenCalendar,
-  ScreenMethodPicker, ScreenReminderPicker, ScreenLocationPicker });
+  ScreenMethodPicker, ScreenReminderPicker, ScreenLocationPicker, ScreenNeedLocation });

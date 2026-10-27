@@ -94,15 +94,18 @@ function KompaktApp({ variant='a', chrome=true }){
     loc = { lat:gpsFix.lat, lon:gpsFix.lon, city:nearestCity(gpsFix.lat, gpsFix.lon) };
     locSource = gpsStatus==='ok' ? 'gps' : 'gps-cached';
   } else {
-    loc = LOC_DEFAULT; locSource = 'default';
+    // No fix yet and no chosen city: never guess a location.
+    loc = null; locSource = 'none';
   }
-  const locLabel = loc.city || fmtCoords(loc.lat, loc.lon);
+  const locLabel = loc ? (loc.city || fmtCoords(loc.lat, loc.lon))
+                       : (gpsStatus==='loading' ? 'Locating…' : 'No location');
 
-  const times = computeTimes(prefs, null, loc.lat, loc.lon);
+  const times = loc ? computeTimes(prefs, null, loc.lat, loc.lon) : null;
+  const T = times || {};
 
   React.useEffect(function(){
     var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdhanScheduler;
-    if(!plugin) return;
+    if(!plugin || !times) return;   // no adhan until the location is known
     var offsets = {'At adhan':0,'5 minutes before':5,'10 minutes before':10,'15 minutes before':15};
     var off = offsets[prefs.reminder] || 0;
     var now = Date.now();
@@ -117,7 +120,7 @@ function KompaktApp({ variant='a', chrome=true }){
       if(fireMs <= now) fireMs += 86400000;
       plugin.schedule({id:i, triggerMs:fireMs, sound:prefs.sound||'makkah', volume:(prefs.adhanVolume||80)/100}).catch(function(){});
     });
-  }, [times.fajr, times.dhuhr, times.asr, times.maghrib, times.isha,
+  }, [T.fajr, T.dhuhr, T.asr, T.maghrib, T.isha,
       prefs.adhan, prefs.sound, prefs.reminder, prefs.adhanVolume,
       prefs.notif.fajr, prefs.notif.dhuhr, prefs.notif.asr,
       prefs.notif.maghrib, prefs.notif.isha]);
@@ -167,7 +170,9 @@ function KompaktApp({ variant='a', chrome=true }){
     case 'method-picker':   view = <ScreenMethodPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'location-picker': view = <ScreenLocationPicker prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locLabel={locLabel} locSource={locSource} gpsStatus={gpsStatus} retryGps={retryGps} />; break;
     case 'reminder-picker': view = <ScreenReminderPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
-    default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} locLabel={locLabel} />;
+    default:              view = !times
+      ? <ScreenNeedLocation gpsStatus={gpsStatus} retryGps={retryGps} go={go} hijri={hijri} dateStr={dateStr} />
+      : <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} locLabel={locLabel} />;
   }
 
   // APK mode: no bezel, no status bar — app fills 100vw × 100vh directly
