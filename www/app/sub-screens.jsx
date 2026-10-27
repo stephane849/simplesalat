@@ -122,6 +122,9 @@ function ScreenNotifications({ prefs, setPrefs, go }){
     {k:'makkah',  label:'Makkah'},
     {k:'madinah', label:'Madīnah'},
     {k:'sudan',   label:'Sudan'},
+    {k:'beep',         label:'Beep',           sub:'Three short beeps'},
+    {k:'vibrate',      label:'Vibrate',        sub:'Silent · vibration only'},
+    {k:'beep_vibrate', label:'Beep & vibrate'},
   ];
   const list = PRAYERS.filter(p=>p.prayer);
   const setNotif = (k,v)=> setPrefs({ notif:{...prefs.notif, [k]:v} });
@@ -152,6 +155,19 @@ function ScreenNotifications({ prefs, setPrefs, go }){
       plugin.play({sound: key, volume: (prefs.adhanVolume != null ? prefs.adhanVolume : 80) / 100}).then(function(){ setPlayingKey(key); }).catch(function(){ setPlayingKey(null); });
       return;
     }
+    if(!ADHAN_SRCS[key]){            // browser preview of beep / vibrate
+      if(key!=='vibrate'){
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext, ac = new AC();
+          var g = ac.createGain(); g.gain.value = 0.3*((prefs.adhanVolume != null ? prefs.adhanVolume : 80)/100); g.connect(ac.destination);
+          [0,0.8,1.6].forEach(function(t){ var o=ac.createOscillator(); o.frequency.value=880; o.connect(g); o.start(ac.currentTime+t); o.stop(ac.currentTime+t+0.4); });
+        } catch(err){}
+      }
+      if(key!=='beep' && navigator.vibrate) navigator.vibrate([500,300,500,300,500]);
+      setPlayingKey(key);
+      setTimeout(function(){ setPlayingKey(function(k){ return k===key ? null : k; }); }, 2600);
+      return;
+    }
     var audio = new Audio(ADHAN_SRCS[key]);
     audio.volume = (prefs.adhanVolume != null ? prefs.adhanVolume : 80) / 100;
     audioRef.current = audio;
@@ -174,7 +190,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
       <hr className="hrule" />
       <div className="scroll">
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">Adhan sound</div><div className="sub">Play call to prayer</div></div>
+          <div className="body"><div className="label">Prayer alert</div><div className="sub">Adhan, beep or vibration</div></div>
           <Toggle on={prefs.adhan} onChange={v=>setPrefs({adhan:v})} />
         </div>
 
@@ -194,7 +210,7 @@ function ScreenNotifications({ prefs, setPrefs, go }){
           {sounds.map(s=>(
             <div key={s.k} className="row" onClick={()=>setPrefs({sound:s.k})} style={{borderBottom:'1px solid var(--line)'}}>
               <span className="lead"><Radio on={prefs.sound===s.k} /></span>
-              <div className="body"><div className="label">{s.label}</div></div>
+              <div className="body"><div className="label">{s.label}</div>{s.sub && <div className="sub">{s.sub}</div>}</div>
               <span className="trail">
                 <button className="appbar iconbtn" style={{padding:13, border:'2px solid var(--ink)', borderRadius:'50%'}}
                   onClick={(e)=>previewSound(e, s.k)} aria-label="Preview">

@@ -93,12 +93,22 @@ jobs:
           @CapacitorPlugin(name = "SalatAudio")
           public class SalatAudioPlugin extends Plugin {
               private MediaPlayer player;
+              private AlertFx fx;
 
               @PluginMethod
               public void play(PluginCall call) {
                   String sound = call.getString("sound", "makkah");
                   float vol = (float) Math.max(0.0, Math.min(1.0, call.getDouble("volume", 1.0)));
                   stopPlayer();
+                  if (AlertFx.isAlert(sound)) {
+                      fx = new AlertFx();
+                      fx.start(getContext(), sound, vol, () -> {
+                          fx = null;
+                          notifyListeners("playbackComplete", new JSObject());
+                      });
+                      call.resolve();
+                      return;
+                  }
                   try {
                       AssetFileDescriptor afd = getContext().getAssets()
                           .openFd("public/audio/adhan-" + sound + ".mp3");
@@ -123,6 +133,7 @@ jobs:
               public void stop(PluginCall call) { stopPlayer(); call.resolve(); }
 
               private void stopPlayer() {
+                  if (fx != null) { fx.stop(); fx = null; }
                   if (player != null) {
                       try { player.stop(); } catch (Exception ignored) {}
                       player.release();
@@ -322,6 +333,7 @@ jobs:
               private static final String CHANNEL = "adhan";
               public static volatile boolean isRunning = false;
               private MediaPlayer mp;
+              private AlertFx fx;
               private PowerManager.WakeLock wakeLock;
               private BroadcastReceiver buttonReceiver;
 
@@ -348,7 +360,7 @@ jobs:
                   PendingIntent launchPi = PendingIntent.getActivity(this, 1, launchIntent, piFlags);
                   NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL)
                       .setContentTitle("Prayer Time")
-                      .setContentText("Adhan is playing")
+                      .setContentText("It is time for prayer")
                       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                       .setPriority(NotificationCompat.PRIORITY_HIGH)
                       .setFullScreenIntent(launchPi, true)
@@ -376,6 +388,11 @@ jobs:
               }
 
               private void play(String sound, float vol) {
+                  if (AlertFx.isAlert(sound)) {
+                      fx = new AlertFx();
+                      fx.start(this, sound, vol, this::stopSelf);
+                      return;
+                  }
                   try {
                       AssetFileDescriptor afd = getAssets().openFd("public/audio/adhan-" + sound + ".mp3");
                       mp = new MediaPlayer();
@@ -399,6 +416,7 @@ jobs:
                       buttonReceiver = null;
                   }
                   if (wakeLock != null && wakeLock.isHeld()) { wakeLock.release(); wakeLock = null; }
+                  if (fx != null) { fx.stop(); fx = null; }
                   if (mp != null) {
                       try { mp.stop(); } catch (Exception ignored) {}
                       mp.release(); mp = null;
@@ -406,6 +424,63 @@ jobs:
               }
 
               @Override public IBinder onBind(Intent i) { return null; }
+          }
+          """)
+          with open(os.path.join(base, 'AlertFx.java'), 'w') as f:
+              f.write("""package com.simplesalat.app;
+          import android.content.Context;
+          import android.media.AudioAttributes;
+          import android.media.AudioManager;
+          import android.media.ToneGenerator;
+          import android.os.Build;
+          import android.os.Handler;
+          import android.os.Looper;
+          import android.os.VibrationEffect;
+          import android.os.Vibrator;
+
+          /** Short non-adhan alerts: "beep", "vibrate", "beep_vibrate". */
+          public class AlertFx {
+              public static final long DURATION_MS = 2600L;
+              public static boolean isAlert(String s) { return wantsBeep(s) || wantsVibrate(s); }
+              public static boolean wantsBeep(String s) { return "beep".equals(s) || "beep_vibrate".equals(s); }
+              public static boolean wantsVibrate(String s) { return "vibrate".equals(s) || "beep_vibrate".equals(s); }
+
+              private ToneGenerator tg;
+              private Vibrator vib;
+              private final Handler h = new Handler(Looper.getMainLooper());
+
+              public void start(Context ctx, String s, float vol, Runnable done) {
+                  stop();
+                  if (wantsBeep(s)) {
+                      try {
+                          tg = new ToneGenerator(AudioManager.STREAM_ALARM,
+                              Math.round(Math.max(0f, Math.min(1f, vol)) * 100));
+                          for (int i = 0; i < 3; i++) {
+                              h.postDelayed(() -> { if (tg != null) tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 400); }, i * 800L);
+                          }
+                      } catch (Exception e) { tg = null; }
+                  }
+                  if (wantsVibrate(s)) {
+                      vib = (Vibrator) ctx.getSystemService(Context.VIBRATOR_SERVICE);
+                      long[] pattern = {0, 500, 300, 500, 300, 500};
+                      if (vib != null && vib.hasVibrator()) {
+                          AudioAttributes aa = new AudioAttributes.Builder()
+                              .setUsage(AudioAttributes.USAGE_ALARM).build();
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                              vib.vibrate(VibrationEffect.createWaveform(pattern, -1), aa);
+                          } else {
+                              vib.vibrate(pattern, -1, aa);
+                          }
+                      }
+                  }
+                  h.postDelayed(() -> { stop(); if (done != null) done.run(); }, DURATION_MS);
+              }
+
+              public void stop() {
+                  h.removeCallbacksAndMessages(null);
+                  if (tg != null) { try { tg.stopTone(); tg.release(); } catch (Exception ignored) {} tg = null; }
+                  if (vib != null) { try { vib.cancel(); } catch (Exception ignored) {} vib = null; }
+              }
           }
           """)
           with open(os.path.join(base, 'AdhanSchedulerPlugin.java'), 'w') as f:
@@ -496,6 +571,9 @@ jobs:
                   '\n    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />'
               )
               content = content.replace('</manifest>', perms + '\n</manifest>')
+          if 'android.permission.VIBRATE' not in content:
+              content = content.replace('</manifest>',
+                  '\n    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>')
           if 'AdhanReceiver' not in content:
               components = (
                   '\n        <receiver android:name=".AdhanReceiver" android:exported="false" />'
