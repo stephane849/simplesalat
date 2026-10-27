@@ -45,6 +45,8 @@ jobs:
             https://unpkg.com/react@18.3.1/umd/react.production.min.js
           curl -fsSL -o www/vendor/react-dom.min.js \
             https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js
+          curl -fsSL -o www/vendor/adhan.min.js \
+            https://unpkg.com/adhan@4.4.6/lib/bundles/adhan.umd.min.js
 
       - name: Download fonts
         run: |

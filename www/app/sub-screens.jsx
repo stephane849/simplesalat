@@ -32,7 +32,16 @@ function ScreenMenu({ go }){
 }
 
 /* ---------- Settings ---------- */
-function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
+function locSubLabel(locSource, gpsStatus){
+  if(locSource==='manual') return 'Manual';
+  if(gpsStatus==='loading') return 'GPS · locating…';
+  if(locSource==='gps') return 'GPS';
+  if(locSource==='gps-cached') return 'GPS · last known';
+  if(gpsStatus==='denied') return 'GPS permission denied';
+  return 'No GPS fix yet';
+}
+
+function ScreenSettings({ prefs, setPrefs, go, loc, locLabel, locSource, gpsStatus }){
   const m = METHODS[prefs.method];
   const a = prefs.hijriAdj || 0;
   const adjLabel = a===0 ? '0 days' : `${a>0?'+':'−'}${Math.abs(a)} day${Math.abs(a)>1?'s':''}`;
@@ -41,11 +50,11 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
       <AppBar title="Settings" onBack={()=>go('home')} onMenu={()=>go('menu')} />
       <hr className="hrule" />
       <div className="scroll">
-        <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">Location</div><div className="sub">{locStatus==='ok'?'GPS':'Auto · GPS'}</div></div>
+        <div className="row" onClick={()=>go('location-picker')} style={{borderBottom:'1px solid var(--line)'}}>
+          <div className="body"><div className="label">Location</div><div className="sub">{locSubLabel(locSource, gpsStatus)}</div></div>
           <span className="trail"><span className="val" style={{maxWidth:146, textAlign:'right', lineHeight:1.3}}>
-            {locStatus==='ok'&&loc ? `${Math.abs(loc.lat).toFixed(2)}°${loc.lat>=0?'N':'S'}, ${Math.abs(loc.lon).toFixed(2)}°${loc.lon>=0?'E':'W'}` : locStatus==='loading' ? 'Locating…' : LOC_DEFAULT.city+' (default)'}
-          </span></span>
+            {locSource==='default' ? locLabel+' (default)' : locLabel}
+          </span><Ico.chev/></span>
         </div>
 
         <div className="row" onClick={()=>go('method-picker')} style={{borderBottom:'1px solid var(--line)'}}>
@@ -83,8 +92,8 @@ function ScreenSettings({ prefs, setPrefs, go, loc, locStatus }){
         </div>
 
         <div className="row" style={{borderBottom:'1px solid var(--line)'}}>
-          <div className="body"><div className="label">High-latitude rule</div><div className="sub">Ottawa, summer</div></div>
-          <span className="trail"><span className="val">Angle-based</span></span>
+          <div className="body"><div className="label">High-latitude rule</div><div className="sub">Automatic for latitude</div></div>
+          <span className="trail"><span className="val">Recommended</span></span>
         </div>
 
         <div className="row" onClick={()=>go('notifications')} style={{borderBottom:'1px solid var(--line)'}}>
@@ -272,6 +281,7 @@ function ScreenReminderPicker({ prefs, setPrefs, go }){
 function ScreenCalendar({ go, hijriAdj=0 }){
   const HJ = (gy, gm1, gd)=>{ const dt=new Date(gy, gm1-1, gd); if(hijriAdj) dt.setDate(dt.getDate()+hijriAdj);
     return gToHijri(dt.getFullYear(), dt.getMonth()+1, dt.getDate()); };
+  const TODAY = todayDate();
   const [view, setView] = React.useState({ y:TODAY.getFullYear(), m:TODAY.getMonth() });
   const first = new Date(view.y, view.m, 1).getDay();
   const days  = new Date(view.y, view.m+1, 0).getDate();
@@ -336,5 +346,54 @@ function ScreenCalendar({ go, hijriAdj=0 }){
   );
 }
 
+/* ---------- Location Picker ---------- */
+function ScreenLocationPicker({ prefs, setPrefs, go, loc, locLabel, locSource, gpsStatus, retryGps }){
+  const [q, setQ] = React.useState('');
+  const auto = prefs.locMode !== 'manual';
+  const gpsLine = gpsStatus==='loading' ? 'Locating… a first GPS fix can take a minute outdoors'
+    : gpsStatus==='ok' ? 'Using ' + locLabel
+    : gpsStatus==='denied' ? 'Location permission denied — allow it in Android settings, or pick a city'
+    : locSource==='gps-cached' ? 'No fresh fix · using last known: ' + locLabel
+    : 'No GPS fix — go outdoors and retry, or pick a city below';
+  const needle = q.trim().toLowerCase();
+  const list = needle ? CITIES.filter(function(c){ return c.city.toLowerCase().indexOf(needle) !== -1; }) : CITIES;
+  return (
+    <div className="view">
+      <AppBar title="Location" onBack={()=>go('settings')} />
+      <hr className="hrule" />
+      <div className="scroll">
+        <div className="row" onClick={function(){ setPrefs({locMode:'auto'}); if(!auto) return; retryGps(); }}
+          style={{borderBottom:'1px solid var(--line)'}}>
+          <span className="lead"><Radio on={auto} /></span>
+          <div className="body">
+            <div className="label">Automatic (GPS)</div>
+            <div className="sub">{auto ? gpsLine : 'Tap to use GPS'}</div>
+          </div>
+          {auto && gpsStatus!=='loading' && <span className="trail"><span className="val">Retry</span></span>}
+        </div>
+
+        <div style={{padding:'16px 32px 8px'}}>
+          <div className="kicker" style={{marginBottom:8}}>Or choose a city</div>
+          <input type="text" value={q} onChange={function(e){ setQ(e.target.value); }} placeholder="Search cities"
+            style={{width:'100%', boxSizing:'border-box', fontFamily:'var(--sans)', fontSize:17, padding:'10px 12px',
+              border:'2px solid var(--ink)', borderRadius:6, background:'var(--paper)', color:'var(--ink)'}} />
+        </div>
+
+        {list.map(function(c){
+          var on = !auto && prefs.manualLoc && prefs.manualLoc.city===c.city;
+          return (
+            <div key={c.city} className="row" onClick={function(){ setPrefs({locMode:'manual', manualLoc:c}); go('settings'); }}
+              style={{borderBottom:'1px solid var(--line)'}}>
+              <span className="lead"><Radio on={!!on} /></span>
+              <div className="body"><div className="label">{c.city}</div></div>
+            </div>
+          );
+        })}
+        {list.length===0 && <div style={{padding:'16px 32px', color:'var(--ink-mute)'}}>No matching city. Try the nearest large city.</div>}
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, { ScreenMenu, ScreenSettings, ScreenNotifications, ScreenCalendar,
-  ScreenMethodPicker, ScreenReminderPicker });
+  ScreenMethodPicker, ScreenReminderPicker, ScreenLocationPicker });

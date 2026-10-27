@@ -9,6 +9,7 @@ const HOMES = { a:HomeLedger, b:HomeCountdown, c:HomeArc, d:HomeArcTimes };
 
 var PREFS_DEFAULTS = {
   method:'isna', madhab:'standard', is24:false, hijriAdj:0,
+  locMode:'auto', manualLoc:null,   // 'auto' = GPS · 'manual' = chosen city
   adhan:true, sound:'makkah', reminder:'At adhan', adhanVolume:80,
   notif:{ fajr:true, dhuhr:true, asr:true, maghrib:true, isha:true, sunrise:false },
 };
@@ -47,21 +48,57 @@ function KompaktApp({ variant='a', chrome=true }){
     return function(){ clearTimeout(timeoutId); if(intervalId !== null) clearInterval(intervalId); };
   }, []);
 
-  // GPS location — null while loading, then { lat, lon }
-  const [loc,       setLoc]     = React.useState(null);
-  const [locStatus, setLocStat] = React.useState('loading');
-  React.useEffect(()=>{
-    if(!navigator.geolocation){ setLocStat('denied'); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos=>{ setLoc({lat:pos.coords.latitude, lon:pos.coords.longitude}); setLocStat('ok'); },
-      ()=>  setLocStat('denied'),
-      { enableHighAccuracy:false, timeout:10000, maximumAge:3600000 }
-    );
-  }, []);
+  // ── Location ──────────────────────────────────────────────────────────
+  // GPS fixes are cached so the last known place survives restarts and
+  // a slow or failed fix never silently drops back to Ottawa.
+  const [gpsFix, setGpsFix] = React.useState(function(){
+    try { return JSON.parse(localStorage.getItem('salat_lastfix') || 'null'); } catch(e){ return null; }
+  });
+  // 'loading' | 'ok' | 'denied' | 'unavailable' | 'timeout'
+  const [gpsStatus, setGpsStatus] = React.useState('loading');
+  const [gpsTry, setGpsTry] = React.useState(0);
+  const retryGps = function(){ setGpsStatus('loading'); setGpsTry(function(n){ return n+1; }); };
 
-  const lat   = loc ? loc.lat : null;
-  const lon   = loc ? loc.lon : null;
-  const times = computeTimes(prefs, null, lat, lon);
+  React.useEffect(function(){
+    if(prefs.locMode === 'manual') return;
+    if(!navigator.geolocation){ setGpsStatus('unavailable'); return; }
+    var cancelled = false;
+    setGpsStatus('loading');
+    var onFix = function(pos){
+      if(cancelled) return;
+      var fix = { lat:pos.coords.latitude, lon:pos.coords.longitude, ts:Date.now() };
+      setGpsFix(fix); setGpsStatus('ok');
+      try { localStorage.setItem('salat_lastfix', JSON.stringify(fix)); } catch(e){}
+    };
+    var onErr = function(err){
+      if(cancelled) return;
+      setGpsStatus(err && err.code===1 ? 'denied' : err && err.code===3 ? 'timeout' : 'unavailable');
+    };
+    // 1st try: satellite GPS (no SIM / Wi-Fi needed, but a cold fix can take a
+    // minute or more). If that fails for any reason other than permission,
+    // fall back to network location.
+    navigator.geolocation.getCurrentPosition(onFix, function(err){
+      if(cancelled) return;
+      if(err && err.code===1){ onErr(err); return; }
+      navigator.geolocation.getCurrentPosition(onFix, onErr,
+        { enableHighAccuracy:false, timeout:20000, maximumAge:6*3600000 });
+    }, { enableHighAccuracy:true, timeout:90000, maximumAge:30*60000 });
+    return function(){ cancelled = true; };
+  }, [prefs.locMode, gpsTry]);
+
+  // Effective location used for the times
+  var loc, locSource;
+  if(prefs.locMode === 'manual' && prefs.manualLoc){
+    loc = prefs.manualLoc; locSource = 'manual';
+  } else if(gpsFix){
+    loc = { lat:gpsFix.lat, lon:gpsFix.lon, city:nearestCity(gpsFix.lat, gpsFix.lon) };
+    locSource = gpsStatus==='ok' ? 'gps' : 'gps-cached';
+  } else {
+    loc = LOC_DEFAULT; locSource = 'default';
+  }
+  const locLabel = loc.city || fmtCoords(loc.lat, loc.lon);
+
+  const times = computeTimes(prefs, null, loc.lat, loc.lon);
 
   React.useEffect(function(){
     var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdhanScheduler;
@@ -108,6 +145,7 @@ function KompaktApp({ variant='a', chrome=true }){
     return function(){ Promise.resolve(handle).then(function(h){ if(h && h.remove) h.remove(); }); };
   }, []);
 
+  const TODAY   = todayDate();
   const adjDate = new Date(TODAY);
   adjDate.setDate(adjDate.getDate() + (prefs.hijriAdj||0));
   const hijri   = gToHijri(adjDate.getFullYear(), adjDate.getMonth()+1, adjDate.getDate());
@@ -123,12 +161,13 @@ function KompaktApp({ variant='a', chrome=true }){
   let view;
   switch(screen){
     case 'menu':          view = <ScreenMenu go={go} />; break;
-    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locStatus={locStatus} />; break;
+    case 'settings':      view = <ScreenSettings prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locLabel={locLabel} locSource={locSource} gpsStatus={gpsStatus} />; break;
     case 'notifications': view = <ScreenNotifications prefs={prefs} setPrefs={setPrefs} go={go} />; break;
     case 'calendar':      view = <ScreenCalendar go={go} hijriAdj={prefs.hijriAdj} />; break;
     case 'method-picker':   view = <ScreenMethodPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
+    case 'location-picker': view = <ScreenLocationPicker prefs={prefs} setPrefs={setPrefs} go={go} loc={loc} locLabel={locLabel} locSource={locSource} gpsStatus={gpsStatus} retryGps={retryGps} />; break;
     case 'reminder-picker': view = <ScreenReminderPicker prefs={prefs} setPrefs={setPrefs} go={go} />; break;
-    default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} />;
+    default:              view = <Home times={times} nowMin={nowMin} prefs={prefs} hijri={hijri} dateStr={dateStr} go={go} locLabel={locLabel} />;
   }
 
   // APK mode: no bezel, no status bar — app fills 100vw × 100vh directly

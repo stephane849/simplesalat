@@ -1,6 +1,7 @@
 /* ============================================================
-   Data + helpers — Ottawa, ON (45.42°N, 75.70°W)
-   Prayer times computed astronomically for the real current date.
+   Data + helpers
+   Prayer times are computed with adhan-js (vendor/adhan.min.js) when
+   it is loaded, falling back to the built-in approximation below.
    ============================================================ */
 
 const PRAYERS = [
@@ -14,17 +15,60 @@ const PRAYERS = [
 
 // fajrAngle / ishaAngle = degrees below horizon
 // ishaInterval = fixed minutes after Maghrib (Umm al-Qurā)
+// lib = adhan-js CalculationMethod name
 const METHODS = {
-  isna:         { label:'ISNA',                   region:'North America',   fajrAngle:15,   ishaAngle:15   },
-  mwl:          { label:'Muslim World League',    region:'Global',          fajrAngle:18,   ishaAngle:17   },
-  egypt:        { label:'Egyptian Authority',     region:'Africa',          fajrAngle:19.5, ishaAngle:17.5 },
-  makkah:       { label:'Umm al-Qurā',            region:'Saudi Arabia',    fajrAngle:18.5, ishaInterval:90 },
-  karachi:      { label:'Karachi',                region:'South Asia',      fajrAngle:18,   ishaAngle:18   },
-  moonsighting: { label:'Moonsighting Committee', region:'Shafaq · general',fajrAngle:18,   ishaAngle:18   },
+  isna:         { label:'ISNA',                   region:'North America',   fajrAngle:15,   ishaAngle:15,   lib:'NorthAmerica' },
+  mwl:          { label:'Muslim World League',    region:'Global',          fajrAngle:18,   ishaAngle:17,   lib:'MuslimWorldLeague' },
+  egypt:        { label:'Egyptian Authority',     region:'Africa',          fajrAngle:19.5, ishaAngle:17.5, lib:'Egyptian' },
+  makkah:       { label:'Umm al-Qurā',            region:'Saudi Arabia',    fajrAngle:18.5, ishaInterval:90, lib:'UmmAlQura' },
+  karachi:      { label:'Karachi',                region:'South Asia',      fajrAngle:18,   ishaAngle:18,   lib:'Karachi' },
+  moonsighting: { label:'Moonsighting Committee', region:'Shafaq · general',fajrAngle:18,   ishaAngle:18,   lib:'MoonsightingCommittee' },
 };
 
-/* Fallback location (Ottawa) used when GPS is unavailable */
+/* Fallback location (Ottawa) used when GPS is unavailable and no city is chosen */
 const LOC_DEFAULT = { lat:45.4215, lon:-75.6972, city:'Ottawa, ON' };
+
+/* Offline city list for the manual location picker (and naming GPS fixes) */
+const CITIES = [
+  ['Ottawa, ON',45.4215,-75.6972],['Gatineau, QC',45.4765,-75.7013],['Toronto, ON',43.6532,-79.3832],
+  ['Mississauga, ON',43.5890,-79.6441],['Brampton, ON',43.7315,-79.7624],['Hamilton, ON',43.2557,-79.8711],
+  ['London, ON',42.9849,-81.2453],['Windsor, ON',42.3149,-83.0364],['Kitchener-Waterloo, ON',43.4516,-80.4925],
+  ['Kingston, ON',44.2312,-76.4860],['Montréal, QC',45.5019,-73.5674],['Québec, QC',46.8139,-71.2080],
+  ['Sherbrooke, QC',45.4042,-71.8929],['Halifax, NS',44.6488,-63.5752],['Moncton, NB',46.0878,-64.7782],
+  ["St. John's, NL",47.5615,-52.7126],['Winnipeg, MB',49.8951,-97.1384],['Regina, SK',50.4452,-104.6189],
+  ['Saskatoon, SK',52.1332,-106.6700],['Calgary, AB',51.0447,-114.0719],['Edmonton, AB',53.5461,-113.4938],
+  ['Vancouver, BC',49.2827,-123.1207],['Surrey, BC',49.1913,-122.8490],['Victoria, BC',48.4284,-123.3656],
+  ['New York, NY',40.7128,-74.0060],['Detroit, MI',42.3314,-83.0458],['Chicago, IL',41.8781,-87.6298],
+  ['Boston, MA',42.3601,-71.0589],['Washington, DC',38.9072,-77.0369],['Philadelphia, PA',39.9526,-75.1652],
+  ['Atlanta, GA',33.7490,-84.3880],['Houston, TX',29.7604,-95.3698],['Dallas, TX',32.7767,-96.7970],
+  ['Minneapolis, MN',44.9778,-93.2650],['Los Angeles, CA',34.0522,-118.2437],['San Francisco, CA',37.7749,-122.4194],
+  ['Seattle, WA',47.6062,-122.3321],['London, UK',51.5072,-0.1276],['Birmingham, UK',52.4862,-1.8904],
+  ['Paris, France',48.8566,2.3522],['Istanbul, Türkiye',41.0082,28.9784],['Cairo, Egypt',30.0444,31.2357],
+  ['Makkah, Saudi Arabia',21.3891,39.8579],['Madīnah, Saudi Arabia',24.5247,39.5692],['Dubai, UAE',25.2048,55.2708],
+  ['Amman, Jordan',31.9539,35.9106],['Casablanca, Morocco',33.5731,-7.5898],['Fès, Morocco',34.0181,-5.0078],
+  ['Tunis, Tunisia',36.8065,10.1815],['Algiers, Algeria',36.7538,3.0588],['Nouakchott, Mauritania',18.0735,-15.9582],
+  ['Dakar, Senegal',14.7167,-17.4677],['Banjul, The Gambia',13.4549,-16.5790],['Bamako, Mali',12.6392,-8.0029],
+  ['Lagos, Nigeria',6.5244,3.3792],['Kano, Nigeria',12.0022,8.5920],['Khartoum, Sudan',15.5007,32.5599],
+  ['Nairobi, Kenya',-1.2921,36.8219],['Mogadishu, Somalia',2.0469,45.3182],['Cape Town, South Africa',-33.9249,18.4241],
+  ['Karachi, Pakistan',24.8607,67.0011],['Lahore, Pakistan',31.5204,74.3587],['Delhi, India',28.7041,77.1025],
+  ['Dhaka, Bangladesh',23.8103,90.4125],['Kuala Lumpur, Malaysia',3.1390,101.6869],['Jakarta, Indonesia',-6.2088,106.8456],
+  ['Sydney, Australia',-33.8688,151.2093],['Melbourne, Australia',-37.8136,144.9631],
+].map(function(c){ return { city:c[0], lat:c[1], lon:c[2] }; });
+
+function _distKm(aLat,aLon,bLat,bLon){
+  const R=6371, dLat=_d2r(bLat-aLat), dLon=_d2r(bLon-aLon);
+  const h=Math.sin(dLat/2)**2 + Math.cos(_d2r(aLat))*Math.cos(_d2r(bLat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+/* Name a GPS fix after the nearest listed city (within 40 km), else null */
+function nearestCity(lat, lon){
+  let best=null, bd=Infinity;
+  CITIES.forEach(function(c){ const d=_distKm(lat,lon,c.lat,c.lon); if(d<bd){ bd=d; best=c; } });
+  return bd<=40 ? best.city : null;
+}
+function fmtCoords(lat, lon){
+  return `${Math.abs(lat).toFixed(2)}°${lat>=0?'N':'S'}, ${Math.abs(lon).toFixed(2)}°${lon>=0?'E':'W'}`;
+}
 
 /* ── Solar maths (Spencer 1971 · ±1 min accuracy up to 65 °N) ── */
 function _d2r(d){ return d*Math.PI/180; }
@@ -52,9 +96,11 @@ function _ha(latDeg, declRad, zenithDeg){
 }
 
 function computeTimes(prefs, date, lat, lon){
-  date = date || TODAY;
+  date = date || todayDate();
   lat  = (lat  != null) ? lat  : LOC_DEFAULT.lat;
   lon  = (lon  != null) ? lon  : LOC_DEFAULT.lon;
+  const precise = _computeAdhan(prefs, date, lat, lon);
+  if(precise) return precise;
 
   const tz = -date.getTimezoneOffset();        // minutes east of UTC
   const { decl, eqt } = _solar(date);
@@ -75,6 +121,25 @@ function computeTimes(prefs, date, lat, lon){
   const asr     = Math.round(noon + _ha(lat, decl, asrZ)*4);
 
   return { fajr, sunrise, dhuhr:Math.round(noon), asr, maghrib, isha };
+}
+
+/* Precise times via adhan-js (same engine as most prayer apps). Returns null if not loaded. */
+function _computeAdhan(prefs, date, lat, lon){
+  const A = window.adhan;
+  if(!A) return null;
+  try {
+    const m = METHODS[prefs.method] || METHODS.isna;
+    const coords = new A.Coordinates(lat, lon);
+    const params = A.CalculationMethod[m.lib]();
+    params.madhab = prefs.madhab === 'hanafi' ? A.Madhab.Hanafi : A.Madhab.Shafi;
+    params.highLatitudeRule = A.HighLatitudeRule.recommended(coords);
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const pt  = new A.PrayerTimes(coords, day, params);
+    const mid = +day;
+    const mins = function(t){ return Math.round((+t - mid)/60000); };
+    return { fajr:mins(pt.fajr), sunrise:mins(pt.sunrise), dhuhr:mins(pt.dhuhr),
+             asr:mins(pt.asr), maghrib:mins(pt.maghrib), isha:mins(pt.isha) };
+  } catch(e){ return null; }
 }
 
 /* ── Time helpers ── */
@@ -129,14 +194,16 @@ const GMONTHS    = ['January','February','March','April','May','June','July',
 
 function dayOrder(times){ return PRAYERS.map(p=>({...p, t:times[p.key]})); }
 
-// TODAY = actual current date (midnight)
-const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+// Today's date at local midnight — always recomputed so the app rolls over
+// correctly when left open past midnight (and across DST changes).
+function todayDate(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+const TODAY = todayDate(); // legacy; prefer todayDate()
 
 // Current time in minutes from midnight, live
 function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
 
 Object.assign(window, {
-  PRAYERS, METHODS, computeTimes, LOC_DEFAULT,
+  PRAYERS, METHODS, computeTimes, LOC_DEFAULT, CITIES, nearestCity, fmtCoords, todayDate,
   fmt, dayOrder, nextPrayer,
   countdown, HIJRI_MONTHS, gToHijri, WEEKDAYS, WEEKDAYS_S, GMONTHS, TODAY,
   nowMinutes,

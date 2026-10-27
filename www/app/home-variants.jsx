@@ -4,19 +4,19 @@
    Props: { times, nowMin, prefs, hijri, dateStr }
    ============================================================ */
 
-function HomeHeader({ hijri, dateStr, compact }){
+function HomeHeader({ hijri, dateStr, compact, locLabel }){
   const hj = `${hijri.d} ${HIJRI_MONTHS[hijri.m]} ${hijri.y}`;
   if(compact){
     return (
       <div style={{textAlign:'center', padding:'18px 24px 4px'}}>
-        <div style={{fontSize:13, letterSpacing:'.04em', color:'var(--ink-soft)'}}>{LOC_DEFAULT.city}</div>
+        <div style={{fontSize:13, letterSpacing:'.04em', color:'var(--ink-soft)'}}>{locLabel || LOC_DEFAULT.city}</div>
         <div style={{fontSize:13, color:'var(--ink-mute)', marginTop:3}}>{hj} · {dateStr}</div>
       </div>
     );
   }
   return (
     <div className="scr-pad" style={{paddingBottom:18}}>
-      <div className="kicker" style={{marginBottom:10}}>{LOC_DEFAULT.city}</div>
+      <div className="kicker" style={{marginBottom:10}}>{locLabel || LOC_DEFAULT.city}</div>
       <div style={{fontSize:25, fontWeight:600, letterSpacing:'-.01em', lineHeight:1.1}}>{hijri.d} {HIJRI_MONTHS[hijri.m]}</div>
       <div style={{fontSize:14, color:'var(--ink-mute)', marginTop:5}}>{hijri.y} AH · {dateStr}</div>
     </div>
@@ -36,14 +36,14 @@ function HomeMenuButton({ go }){
 }
 
 /* ---------- A · LEDGER — list-led, editorial ---------- */
-function HomeLedger({ times, nowMin, prefs, hijri, dateStr, go }){
+function HomeLedger({ times, nowMin, prefs, hijri, dateStr, go, locLabel }){
   const nk = nextPrayer(times, nowMin).key;
   const next = PRAYERS.find(p=>p.key===nk);
   const cd = countdown(times[nk], nowMin);
   return (
     <div className="view">
       <HomeMenuButton go={go} />
-      <HomeHeader hijri={hijri} dateStr={dateStr} />
+      <HomeHeader hijri={hijri} dateStr={dateStr} locLabel={locLabel} />
       <hr className="hrule strong" />
       <div className="scr-pad" style={{paddingTop:20, paddingBottom:20}}>
         <div className="kicker" style={{marginBottom:10}}>Next prayer</div>
@@ -90,7 +90,7 @@ function HomeLedger({ times, nowMin, prefs, hijri, dateStr, go }){
 }
 
 /* ---------- B · COUNTDOWN — giant remaining-time hero ---------- */
-function HomeCountdown({ times, nowMin, prefs, hijri, dateStr, go }){
+function HomeCountdown({ times, nowMin, prefs, hijri, dateStr, go, locLabel }){
   const nk = nextPrayer(times, nowMin).key;
   const next = PRAYERS.find(p=>p.key===nk);
   const cd = countdown(times[nk], nowMin);
@@ -102,7 +102,7 @@ function HomeCountdown({ times, nowMin, prefs, hijri, dateStr, go }){
   return (
     <div className="view">
       <HomeMenuButton go={go} />
-      <HomeHeader hijri={hijri} dateStr={dateStr} compact />
+      <HomeHeader hijri={hijri} dateStr={dateStr} locLabel={locLabel} compact />
       <div style={{flex:'1 1 auto', display:'flex', flexDirection:'column', alignItems:'center',
         justifyContent:'center', padding:'8px 32px'}}>
         <div className="kicker" style={{marginBottom:18}}>Until {next.en}</div>
@@ -199,7 +199,7 @@ function DayArc({ times, nowMin, size='full', focusKey=null, onSelect=null }){
 }
 
 /* ---------- C · ARC OF THE DAY — sun-path metaphor + tap-to-select ---------- */
-function HomeArc({ times, nowMin, prefs, hijri, dateStr, go }){
+function HomeArc({ times, nowMin, prefs, hijri, dateStr, go, locLabel }){
   const dailies = PRAYERS.filter(p=>p.prayer);
   const liveNextKey = nextPrayer(times, nowMin).key;
   const liveIdx = Math.max(0, dailies.findIndex(p=>p.key===liveNextKey));
@@ -216,7 +216,7 @@ function HomeArc({ times, nowMin, prefs, hijri, dateStr, go }){
   return (
     <div className="view">
       <HomeMenuButton go={go} />
-      <HomeHeader hijri={hijri} dateStr={dateStr} compact />
+      <HomeHeader hijri={hijri} dateStr={dateStr} locLabel={locLabel} compact />
       <div style={{padding:'4px 0 0'}}>
         <DayArc times={times} nowMin={nowMin} size="full" focusKey={sel.key}
           onSelect={(k)=>setIdx(dailies.findIndex(p=>p.key===k))} />
@@ -246,14 +246,14 @@ function HomeArc({ times, nowMin, prefs, hijri, dateStr, go }){
 }
 
 /* ---------- D · ARC + TIMES — arc metaphor over the full day list ---------- */
-function HomeArcTimes({ times, nowMin, prefs, hijri, dateStr, go }){
+function HomeArcTimes({ times, nowMin, prefs, hijri, dateStr, go, locLabel }){
   const nk = nextPrayer(times, nowMin).key;
   const next = PRAYERS.find(p=>p.key===nk);
   const cd = countdown(times[nk], nowMin);
   return (
     <div className="view">
       <HomeMenuButton go={go} />
-      <HomeHeader hijri={hijri} dateStr={dateStr} compact />
+      <HomeHeader hijri={hijri} dateStr={dateStr} locLabel={locLabel} compact />
       <div style={{padding:'2px 32px 0'}}>
         <DayArc times={times} nowMin={nowMin} size="compact" />
       </div>
